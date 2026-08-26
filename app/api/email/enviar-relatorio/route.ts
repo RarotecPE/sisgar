@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { Resend } from "resend"
 import { sql } from "@/lib/db"
 import { getSession } from "@/lib/auth"
+import { buildSisgarUrl } from "@/lib/app-url"
 import { RelatorioEmail } from "@/lib/email-templates/relatorio-email"
 
 // Lazy initialization of Resend to avoid build errors
@@ -68,10 +69,7 @@ export async function POST(request: Request) {
       : "Não informada"
 
     // URL de validação
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL 
-      ? `https://${process.env.VERCEL_URL}` 
-      : "http://localhost:3000"
-    const validacaoUrl = `${baseUrl}/validar/${relatorio.numero_autenticacao}`
+    const validacaoUrl = buildSisgarUrl(`/validar/${relatorio.numero_autenticacao}`)
 
     // Coletar emails dos destinatários
     const emails: string[] = []

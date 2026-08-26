@@ -8,6 +8,7 @@ import {
   totalItensServico,
   type ApuracaoRelatorio,
 } from "@/lib/apuracao"
+import { buildSisgarUrl } from "@/lib/app-url"
 import { generateRelatorioPDF, buildRelatorioPdfDataFromRecord } from "@/lib/pdf-generator"
 
 const COLORS = {
@@ -230,11 +231,12 @@ export async function generateApuracaoPDF(data: ApuracaoPdfData): Promise<Blob> 
   }
 
   // ===== HEADER =====
-  const origin =
-    typeof window !== "undefined" ? window.location.origin : "https://sisgar.rarotec.com.br"
+  const validationUrl = typeof window !== "undefined"
+    ? `${window.location.origin}/validar/${numeroAutenticacao}`
+    : buildSisgarUrl(`/validar/${numeroAutenticacao}`)
   let qrDataUrl: string | null = null
   try {
-    qrDataUrl = await QRCode.toDataURL(`${origin}/validar/${numeroAutenticacao}`, {
+    qrDataUrl = await QRCode.toDataURL(validationUrl, {
       width: 120,
       margin: 0,
       color: { dark: "#1E5392", light: "#FFFFFF" },
