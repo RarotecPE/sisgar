@@ -1,6 +1,7 @@
 import { jsPDF } from "jspdf"
 import QRCode from "qrcode"
 import { PDFDocument } from "pdf-lib"
+import { buildSisgarUrl } from "@/lib/app-url"
 
 // Cores da Rarotec
 const COLORS = {
@@ -231,7 +232,9 @@ export async function generateRelatorioPDF(data: RelatorioData): Promise<Blob> {
   let validationUrl = ""
   
   if (data.numeroAutenticacao) {
-    validationUrl = `${typeof window !== 'undefined' ? window.location.origin : 'https://sisgar.rarotec.com.br'}/validar/${data.numeroAutenticacao}`
+    validationUrl = typeof window !== "undefined"
+      ? `${window.location.origin}/validar/${data.numeroAutenticacao}`
+      : buildSisgarUrl(`/validar/${data.numeroAutenticacao}`)
     try {
       qrDataUrl = await QRCode.toDataURL(validationUrl, {
         width: 120,
