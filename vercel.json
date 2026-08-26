@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/apuracao/cron/emissao-automatica",
+      "schedule": "0 9 * * *"
+    }
+  ]
+}

@@ -1,0 +1,395 @@
+"use client"
+
+import { useState, useEffect } from "react"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Badge } from "@/components/ui/badge"
+import { 
+  Plus, 
+  Search, 
+  Pencil, 
+  Trash2, 
+  Loader2, 
+  Users,
+  UserCheck,
+  UserX,
+  MoreHorizontal,
+  ShieldAlert
+} from "lucide-react"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { TecnicoForm } from "./tecnico-form"
+import { ExportButton } from "@/components/export-button"
+import { exportToExcel, exportToPDF } from "@/lib/export-utils"
+import type { TecnicoRarotec } from "@/lib/types"
+import { useSession } from "@/lib/auth-context"
+import { isGestor } from "@/lib/permissions"
+
+export default function TecnicosRarotecPage() {
+  const { user } = useSession()
+  const userIsGestor = user?.nome ? isGestor(user.nome, user.cargo) : false
+  
+  const [tecnicos, setTecnicos] = useState<TecnicoRarotec[]>([])
+  const [loading, setLoading] = useState(true)
+  const [search, setSearch] = useState("")
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [editingTecnico, setEditingTecnico] = useState<TecnicoRarotec | null>(null)
+  
+  // Verificar acesso
+  if (!userIsGestor) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] p-6">
+        <ShieldAlert className="h-16 w-16 text-amber-500 mb-4" />
+        <h1 className="text-2xl font-semibold text-foreground mb-2">Acesso Restrito</h1>
+        <p className="text-muted-foreground text-center max-w-md">
+          Apenas coordenadores, gerentes e diretores podem acessar o cadastro de Tecnicos Rarotec.
+        </p>
+      </div>
+    )
+  }
+
+  async function fetchTecnicos() {
+    try {
+      const res = await fetch("/api/tecnicos-rarotec")
+      const data = await res.json()
+      if (Array.isArray(data)) {
+        setTecnicos(data)
+      } else {
+        console.error("API returned non-array:", data)
+        setTecnicos([])
+      }
+    } catch (error) {
+      console.error("Error fetching tecnicos:", error)
+      setTecnicos([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchTecnicos()
+  }, [])
+
+  async function handleDelete(id: number) {
+    if (!confirm("Tem certeza que deseja excluir este tecnico?")) return
+
+    try {
+      await fetch(`/api/tecnicos-rarotec/${id}`, { method: "DELETE" })
+      fetchTecnicos()
+    } catch (error) {
+      console.error("Error deleting tecnico:", error)
+    }
+  }
+
+  // Funções de exportação
+  const handleExportExcel = () => {
+    exportToExcel({
+      filename: "tecnicos-rarotec",
+      title: "Lista de Técnicos Rarotec",
+      columns: [
+        { header: "Nome", key: "nome", width: 30 },
+        { header: "Cargo", key: "cargo", width: 20 },
+        { header: "E-mail", key: "email", width: 35 },
+        { header: "Celular", key: "celular", width: 18 },
+        { header: "Status", key: "status", width: 10 },
+      ],
+      data: filteredTecnicos.map(t => ({
+        ...t,
+        status: t.ativo ? "Ativo" : "Inativo"
+      }))
+    })
+  }
+
+  const handleExportPDF = () => {
+    exportToPDF({
+      filename: "tecnicos-rarotec",
+      title: "Lista de Técnicos Rarotec",
+      columns: [
+        { header: "Nome", key: "nome" },
+        { header: "Cargo", key: "cargo" },
+        { header: "E-mail", key: "email" },
+        { header: "Celular", key: "celular" },
+        { header: "Status", key: "status" },
+      ],
+      data: filteredTecnicos.map(t => ({
+        ...t,
+        status: t.ativo ? "Ativo" : "Inativo"
+      }))
+    })
+  }
+
+  async function handleToggleStatus(tecnico: TecnicoRarotec) {
+    try {
+      await fetch(`/api/tecnicos-rarotec/${tecnico.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...tecnico, ativo: !tecnico.ativo }),
+      })
+      fetchTecnicos()
+    } catch (error) {
+      console.error("Error updating tecnico:", error)
+    }
+  }
+
+  function handleEdit(tecnico: TecnicoRarotec) {
+    setEditingTecnico(tecnico)
+    setDialogOpen(true)
+  }
+
+  function handleNew() {
+    setEditingTecnico(null)
+    setDialogOpen(true)
+  }
+
+  function handleSuccess() {
+    setDialogOpen(false)
+    setEditingTecnico(null)
+    fetchTecnicos()
+  }
+
+  const filteredTecnicos = tecnicos.filter(
+    (t) =>
+      t.nome.toLowerCase().includes(search.toLowerCase()) ||
+      t.email?.toLowerCase().includes(search.toLowerCase()) ||
+      t.cargos?.some((c) => c.toLowerCase().includes(search.toLowerCase()))
+  )
+
+  const totalAtivos = tecnicos.filter((t) => t.ativo).length
+  const totalInativos = tecnicos.filter((t) => !t.ativo).length
+
+  return (
+    <div className="p-6 lg:p-8 space-y-6">
+      {/* Header */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-foreground">Tecnicos Rarotec</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Gerencie os profissionais da equipe
+          </p>
+        </div>
+        <div className="flex gap-2 w-full sm:w-auto">
+          <ExportButton
+            onExportExcel={handleExportExcel}
+            onExportPDF={handleExportPDF}
+            disabled={filteredTecnicos.length === 0}
+          />
+          <Button onClick={handleNew} className="flex-1 sm:flex-none">
+            <Plus className="mr-2 h-4 w-4" />
+            Novo Tecnico
+          </Button>
+        </div>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid gap-4 sm:grid-cols-3">
+        <Card className="border shadow-sm">
+          <CardContent className="flex items-center gap-4 p-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
+              <Users className="h-6 w-6 text-primary" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold">{tecnicos.length}</p>
+              <p className="text-sm text-muted-foreground">Total</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border shadow-sm">
+          <CardContent className="flex items-center gap-4 p-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-100">
+              <UserCheck className="h-6 w-6 text-emerald-600" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold">{totalAtivos}</p>
+              <p className="text-sm text-muted-foreground">Ativos</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border shadow-sm">
+          <CardContent className="flex items-center gap-4 p-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gray-100">
+              <UserX className="h-6 w-6 text-gray-600" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold">{totalInativos}</p>
+              <p className="text-sm text-muted-foreground">Inativos</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Search and Table */}
+      <Card className="border shadow-sm">
+        <CardHeader className="pb-4">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                <Users className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <CardTitle className="text-base font-medium">Lista de Tecnicos</CardTitle>
+                <p className="text-sm text-muted-foreground">{filteredTecnicos.length} resultado(s)</p>
+              </div>
+            </div>
+            <div className="relative w-full sm:w-80">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Buscar por nome, cargo ou email..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/50">
+                  <TableHead className="font-medium">Nome</TableHead>
+                  <TableHead className="font-medium">Cargo</TableHead>
+                  <TableHead className="font-medium hidden md:table-cell">E-mail</TableHead>
+                  <TableHead className="font-medium hidden lg:table-cell">Celular</TableHead>
+                  <TableHead className="font-medium">Status</TableHead>
+                  <TableHead className="font-medium w-[70px]"></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="h-32 text-center">
+                      <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
+                    </TableCell>
+                  </TableRow>
+                ) : filteredTecnicos.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="h-32 text-center">
+                      <div className="flex flex-col items-center gap-2">
+                        <Users className="h-8 w-8 text-muted-foreground/30" />
+                        <p className="text-sm text-muted-foreground">
+                          {search ? "Nenhum tecnico encontrado" : "Nenhum tecnico cadastrado"}
+                        </p>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredTecnicos.map((tecnico) => (
+                    <TableRow key={tecnico.id} className="group">
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary text-sm font-medium">
+                            {tecnico.nome.charAt(0).toUpperCase()}
+                          </div>
+                          <span className="font-medium">{tecnico.nome}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {tecnico.cargos?.length > 0 
+                          ? tecnico.cargos.join(", ") 
+                          : "-"}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground hidden md:table-cell">
+                        {tecnico.email || "-"}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground hidden lg:table-cell">
+                        {tecnico.celular || tecnico.telefone || "-"}
+                      </TableCell>
+                      <TableCell>
+                        <Badge 
+                          variant="secondary"
+                          className={
+                            tecnico.ativo 
+                              ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-100" 
+                              : "bg-gray-100 text-gray-600 hover:bg-gray-100"
+                          }
+                        >
+                          {tecnico.ativo ? "Ativo" : "Inativo"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleEdit(tecnico)}>
+                              <Pencil className="mr-2 h-4 w-4" />
+                              Editar
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleToggleStatus(tecnico)}>
+                              {tecnico.ativo ? (
+                                <>
+                                  <UserX className="mr-2 h-4 w-4" />
+                                  Desativar
+                                </>
+                              ) : (
+                                <>
+                                  <UserCheck className="mr-2 h-4 w-4" />
+                                  Ativar
+                                </>
+                              )}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              onClick={() => handleDelete(tecnico.id)}
+                              className="text-destructive focus:text-destructive"
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Excluir
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Dialog */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {editingTecnico ? "Editar Tecnico" : "Novo Tecnico"}
+            </DialogTitle>
+            <DialogDescription>
+              {editingTecnico
+                ? "Atualize as informacoes do tecnico"
+                : "Preencha os dados do novo tecnico"}
+            </DialogDescription>
+          </DialogHeader>
+          <TecnicoForm
+            tecnico={editingTecnico}
+            onSuccess={handleSuccess}
+            onCancel={() => setDialogOpen(false)}
+          />
+        </DialogContent>
+      </Dialog>
+    </div>
+  )
+}
