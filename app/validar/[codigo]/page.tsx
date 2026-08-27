@@ -1,8 +1,9 @@
 "use client"
 
-import { use, useState } from "react"
+import { use, useEffect, useState } from "react"
 import useSWR from "swr"
 import Link from "next/link"
+import { useTheme } from "next-themes"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { 
@@ -17,7 +18,9 @@ import {
   Loader2,
   ShieldCheck,
   ShieldX,
-  Download
+  Download,
+  Moon,
+  Sun
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -100,6 +103,15 @@ interface ValidacaoResult {
 export default function ValidarCodigoPage({ params }: { params: Promise<{ codigo: string }> }) {
   const { codigo } = use(params)
   const [downloading, setDownloading] = useState(false)
+  const [themeMounted, setThemeMounted] = useState(false)
+  const { resolvedTheme, setTheme } = useTheme()
+  const isDark = themeMounted ? resolvedTheme !== "light" : true
+  const themeLabel = themeMounted ? (isDark ? "Ativar modo claro" : "Ativar modo escuro") : "Alternar tema"
+
+  useEffect(() => {
+    setThemeMounted(true)
+  }, [])
+
   const { data, error, isLoading } = useSWR<ValidacaoResult>(
     `/api/validar/${codigo}`,
     fetcher
@@ -219,12 +231,24 @@ export default function ValidarCodigoPage({ params }: { params: Promise<{ codigo
               className="h-8 w-auto"
             />
           </Link>
-          <Link href="/validar">
-            <Button variant="outline" size="sm">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Nova Consulta
+          <div className="flex items-center gap-2">
+            <Link href="/validar">
+              <Button variant="outline" size="sm">
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Nova Consulta
+              </Button>
+            </Link>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              aria-label={themeLabel}
+              title={themeLabel}
+              onClick={() => setTheme(isDark ? "light" : "dark")}
+            >
+              {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
             </Button>
-          </Link>
+          </div>
         </div>
       </header>
 

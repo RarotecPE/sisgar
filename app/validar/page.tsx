@@ -1,9 +1,10 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
+import { useTheme } from "next-themes"
 import Link from "next/link"
-import { Search, FileText, ShieldCheck, ArrowLeft } from "lucide-react"
+import { Moon, Search, ShieldCheck, Sun } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -11,7 +12,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 export default function ValidarPage() {
   const [codigo, setCodigo] = useState("")
   const [loading, setLoading] = useState(false)
+  const [themeMounted, setThemeMounted] = useState(false)
   const router = useRouter()
+  const { resolvedTheme, setTheme } = useTheme()
+  const isDark = themeMounted ? resolvedTheme !== "light" : true
+  const themeLabel = themeMounted ? (isDark ? "Ativar modo claro" : "Ativar modo escuro") : "Alternar tema"
+
+  useEffect(() => {
+    setThemeMounted(true)
+  }, [])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -33,11 +42,23 @@ export default function ValidarPage() {
               className="h-8 w-auto"
             />
           </Link>
-          <Link href="/login">
-            <Button variant="outline" size="sm">
-              Area Restrita
+          <div className="flex items-center gap-2">
+            <Link href="/login">
+              <Button variant="outline" size="sm">
+                Área Restrita
+              </Button>
+            </Link>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              aria-label={themeLabel}
+              title={themeLabel}
+              onClick={() => setTheme(isDark ? "light" : "dark")}
+            >
+              {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
             </Button>
-          </Link>
+          </div>
         </div>
       </header>
 

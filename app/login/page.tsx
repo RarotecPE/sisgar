@@ -2,31 +2,52 @@
 
 import Image from "next/image"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
+import { Suspense, useEffect, useMemo, useRef, useState } from "react"
 import { useTheme } from "next-themes"
 import {
-  Loader2,
+  KeyRound,
   MessagesSquare,
   Moon,
   ShieldCheck,
   Sun,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import { Card, CardContent } from "@/components/ui/card"
 
-export default function LoginPage() {
+function LoginContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { resolvedTheme, setTheme } = useTheme()
-  const [email, setEmail] = useState("")
-  const [senha, setSenha] = useState("")
   const [error, setError] = useState("")
-  const [loading, setLoading] = useState(false)
+  const [message, setMessage] = useState("")
+  const [ssoLoading, setSsoLoading] = useState(false)
+  const [checkingNexusSession, setCheckingNexusSession] = useState(true)
+  const [themeMounted, setThemeMounted] = useState(false)
+  const [silentSsoUrl, setSilentSsoUrl] = useState("")
   const [ouveAtivo, setOuveAtivo] = useState(false)
+  const popupRef = useRef<Window | null>(null)
+  const popupCheckRef = useRef<number | null>(null)
 
-  const isDark = resolvedTheme !== "light"
+  const nextPath = useMemo(() => {
+    const value = searchParams.get("next")
+    if (!value || !value.startsWith("/") || value.startsWith("//") || value.startsWith("/api/")) return "/dashboard"
+    return value
+  }, [searchParams])
+
+  const isDark = themeMounted ? resolvedTheme !== "light" : true
+  const themeLabel = themeMounted ? (isDark ? "Ativar modo claro" : "Ativar modo escuro") : "Alternar tema"
+
+  const stopPopupCheck = () => {
+    if (popupCheckRef.current !== null) {
+      window.clearInterval(popupCheckRef.current)
+      popupCheckRef.current = null
+    }
+  }
+
+  useEffect(() => {
+    setThemeMounted(true)
+  }, [])
 
   useEffect(() => {
     fetch("/api/ouve/config")
@@ -35,32 +56,74 @@ export default function LoginPage() {
       .catch(() => setOuveAtivo(false))
   }, [])
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    setError("")
-    setLoading(true)
+  useEffect(() => {
+    function handleMessage(event: MessageEvent) {
+      if (event.origin !== window.location.origin) return
+      if (event.data?.type !== "raronexus:sso") return
 
-    try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, senha }),
-      })
+      stopPopupCheck()
+      if (event.data.mode !== "silent") {
+        setSsoLoading(false)
+        popupRef.current = null
+      }
+      setCheckingNexusSession(false)
 
-      const data = await res.json()
-
-      if (!res.ok) {
-        setError(data.error || "Erro ao fazer login")
+      if (event.data.status === "success") {
+        router.replace(event.data.redirectTo || nextPath)
         return
       }
 
-      router.push("/dashboard")
-      router.refresh()
-    } catch {
-      setError("Erro ao conectar com o servidor")
-    } finally {
-      setLoading(false)
+      if (event.data.mode !== "silent") {
+        setError(event.data.message || "Não foi possível entrar com RaroNexus.")
+      }
     }
+
+    async function tryExistingSessions() {
+      const response = await fetch("/api/auth/session", { cache: "no-store" }).catch(() => null)
+      const session = response?.ok ? await response.json().catch(() => null) : null
+
+      if (session?.authenticated) {
+        router.replace(nextPath)
+        return
+      }
+
+      setSilentSsoUrl(`/api/auth/raronexus/start?mode=silent&next=${encodeURIComponent(nextPath)}&attempt=${Date.now()}`)
+      window.setTimeout(() => setCheckingNexusSession(false), 4500)
+    }
+
+    window.addEventListener("message", handleMessage)
+    void tryExistingSessions()
+    return () => {
+      window.removeEventListener("message", handleMessage)
+      stopPopupCheck()
+    }
+  }, [nextPath, router])
+
+  const startRaroNexusLogin = () => {
+    setError("")
+    setMessage("")
+    setSsoLoading(true)
+
+    const popup = window.open(
+      `/api/auth/raronexus/start?next=${encodeURIComponent(nextPath)}`,
+      "raronexus-login",
+      "width=520,height=720,menubar=no,toolbar=no,location=no,status=no"
+    )
+
+    if (!popup) {
+      setSsoLoading(false)
+      setError("Permita popups para entrar com RaroNexus.")
+      return
+    }
+
+    popupRef.current = popup
+    stopPopupCheck()
+    popupCheckRef.current = window.setInterval(() => {
+      if (!popupRef.current?.closed) return
+      stopPopupCheck()
+      popupRef.current = null
+      setSsoLoading(false)
+    }, 500)
   }
 
   return (
@@ -72,8 +135,8 @@ export default function LoginPage() {
         variant="ghost"
         size="icon"
         className="absolute right-4 top-4 rounded-lg border border-border bg-card/80 text-muted-foreground shadow-sm backdrop-blur transition-colors hover:bg-secondary hover:text-foreground"
-        aria-label={isDark ? "Ativar modo claro" : "Ativar modo escuro"}
-        title={isDark ? "Ativar modo claro" : "Ativar modo escuro"}
+        aria-label={themeLabel}
+        title={themeLabel}
         onClick={() => setTheme(isDark ? "light" : "dark")}
       >
         {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
@@ -96,52 +159,36 @@ export default function LoginPage() {
               SIS<span className="text-primary">GAR</span>
             </h1>
             <p className="text-sm text-muted-foreground">
-              Sistema de Gestão Administrativa da Rarotec
+              Entre com sua conta RaroNexus para acessar a plataforma.
             </p>
           </div>
         </div>
 
         <Card className="border-border bg-card/90 shadow-2xl backdrop-blur-xl">
-          <CardHeader className="space-y-1 text-center">
-            <CardTitle className="text-xl">Acesse sua conta</CardTitle>
-            <CardDescription>
-              Entre com suas credenciais para acessar a plataforma.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {error && (
-                <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm font-medium text-destructive">
-                  {error}
-                </div>
-              )}
-              <div className="space-y-2">
-                <Label htmlFor="email">E-mail</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="seu@email.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="senha">Senha</Label>
-                <Input
-                  id="senha"
-                  type="password"
-                  placeholder="••••••••"
-                  value={senha}
-                  onChange={(e) => setSenha(e.target.value)}
-                  required
-                />
-              </div>
-              <Button type="submit" className="h-11 w-full font-semibold" disabled={loading}>
-                {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-                Entrar
-              </Button>
-            </form>
+          <CardContent className="p-6">
+            <Button
+              type="button"
+              className="h-11 w-full gap-3 font-semibold"
+              onClick={startRaroNexusLogin}
+              disabled={ssoLoading || checkingNexusSession}
+            >
+              <KeyRound className="h-4 w-4" />
+              {ssoLoading ? "Aguardando RaroNexus..." : checkingNexusSession ? "Verificando RaroNexus..." : "Entrar com RaroNexus"}
+            </Button>
+
+            {silentSsoUrl ? <iframe title="Verificação RaroNexus" src={silentSsoUrl} className="hidden" /> : null}
+
+            {(message || error) && (
+              <p
+                className={`mt-4 rounded-lg border px-3 py-2 text-sm ${
+                  error
+                    ? "border-destructive/30 bg-destructive/10 text-destructive"
+                    : "border-primary/30 bg-primary/10 text-primary"
+                }`}
+              >
+                {error || message}
+              </p>
+            )}
 
             <div className="mt-6 flex flex-col gap-3 border-t border-border pt-4">
               <Button variant="outline" className="w-full gap-2" asChild>
@@ -163,5 +210,13 @@ export default function LoginPage() {
         </Card>
       </div>
     </main>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<main className="flex min-h-screen items-center justify-center bg-background text-foreground">Carregando...</main>}>
+      <LoginContent />
+    </Suspense>
   )
 }
