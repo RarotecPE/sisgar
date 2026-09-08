@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { useTheme } from "next-themes"
+import { useTheme } from "@/components/theme-provider"
 import Link from "next/link"
 import { Moon, Search, ShieldCheck, Sun } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -36,11 +36,14 @@ export default function ValidarPage() {
       <header className="border-b bg-background/95 backdrop-blur">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
-            <img
-              src="https://www.rarotec.com.br/assets/logo.png"
-              alt="Rarotec"
-              className="h-8 w-auto"
-            />
+            <span className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-2xl bg-white p-0.5 shadow-sm ring-1 ring-border">
+              <img
+                src="/logo.png"
+                alt="SISGAR"
+                className="h-full w-full object-contain"
+              />
+            </span>
+            <span className="font-semibold text-foreground">SISGAR</span>
           </Link>
           <div className="flex items-center gap-2">
             <Link href="/login">

@@ -192,13 +192,13 @@ export function AppSidebar({ user }: AppSidebarProps) {
   const SidebarContent = () => (
     <>
       <div className="flex h-16 shrink-0 items-center gap-3 px-6">
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-accent to-primary shadow-sm">
+        <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-2xl bg-white p-0.5 shadow-sm ring-1 ring-white/10">
           <Image
             src="/logo.png"
-            alt="Rarotec"
-            width={24}
-            height={24}
-            className="h-auto w-auto brightness-0 invert"
+            alt="SISGAR"
+            width={34}
+            height={34}
+            className="h-[34px] w-[34px] object-contain"
           />
         </div>
         <div>
@@ -308,13 +308,13 @@ export function AppSidebar({ user }: AppSidebarProps) {
 
         <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-2">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-accent to-primary">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white p-0.5 shadow-sm ring-1 ring-white/10">
               <Image
                 src="/logo.png"
-                alt="Rarotec"
-                width={20}
-                height={20}
-                className="h-auto w-auto brightness-0 invert"
+                alt="SISGAR"
+                width={30}
+                height={30}
+                className="h-[30px] w-[30px] object-contain"
               />
             </div>
             <span className="truncate font-semibold">SISGAR</span>

@@ -261,10 +261,21 @@ export async function generateRelatorioPDF(data: RelatorioData): Promise<Blob> {
   }
 
   // Logo (esquerda) - imagem ou texto fallback
-  const logoHeight = 12
-  const logoWidth = 45 // Proporção aproximada do logo
-  
+  let logoHeight = 18
+  let logoWidth = 18
+
   if (logoDataUrl) {
+    try {
+      const props = doc.getImageProperties(logoDataUrl)
+      logoWidth = (logoHeight * props.width) / props.height
+      if (logoWidth > 24) {
+        logoWidth = 24
+        logoHeight = (logoWidth * props.height) / props.width
+      }
+    } catch {
+      logoWidth = 18
+      logoHeight = 18
+    }
     doc.addImage(logoDataUrl, "PNG", margin, yPos, logoWidth, logoHeight)
   } else {
     // Fallback para texto se não carregar a imagem

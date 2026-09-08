@@ -3,7 +3,7 @@
 import { use, useEffect, useState } from "react"
 import useSWR from "swr"
 import Link from "next/link"
-import { useTheme } from "next-themes"
+import { useTheme } from "@/components/theme-provider"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { 
@@ -69,14 +69,14 @@ interface ValidacaoResult {
   error?: string
   tipo?: "apuracao"
   apuracao?: ApuracaoValidada
-  relatorio?: {
+  relatório?: {
     id: number
     numero_autenticacao: string
     data_visita: string
     data_fim?: string
     hora_inicio?: string
     hora_fim?: string
-    data_relatorio: string
+    data_relatório: string
     municipio: string
     estado: string
     cliente_nome: string
@@ -118,11 +118,11 @@ export default function ValidarCodigoPage({ params }: { params: Promise<{ codigo
   )
 
   const handleDownloadPDF = async () => {
-    if (!data?.relatorio) return
+    if (!data?.relatório) return
     
     setDownloading(true)
     try {
-      const rel = data.relatorio
+      const rel = data.relatório
       
       // Processar orgao_atendido para criar entidades formatadas (igual ao histórico)
       const processedEntidades = rel.orgao_atendido ? rel.orgao_atendido.split("; ").map((o: string) => {
@@ -155,7 +155,7 @@ export default function ValidarCodigoPage({ params }: { params: Promise<{ codigo
       // Preparar dados para o PDF - idêntico ao formato usado no histórico
       const pdfData = {
         tiposRelatorio: rel.tema ? rel.tema.split(", ") : [rel.tipo_servico || "Visita Tecnica"],
-        dataInicio: rel.data_visita || rel.data_relatorio || "",
+        dataInicio: rel.data_visita || rel.data_relatório || "",
         dataFim: rel.data_fim || rel.data_visita || "",
         horaInicio: rel.hora_inicio || "",
         horaFim: rel.hora_fim || "",
@@ -208,8 +208,8 @@ export default function ValidarCodigoPage({ params }: { params: Promise<{ codigo
       }
       
       const blob = await generateRelatorioPDF(pdfData)
-      const dataFormatada = new Date(rel.data_visita || rel.data_relatorio).toISOString().split("T")[0]
-      const filename = `relatorio-${rel.municipio?.toLowerCase().replace(/\s+/g, "-") || "visita"}-${dataFormatada}.pdf`
+      const dataFormatada = new Date(rel.data_visita || rel.data_relatório).toISOString().split("T")[0]
+      const filename = `relatório-${rel.municipio?.toLowerCase().replace(/\s+/g, "-") || "visita"}-${dataFormatada}.pdf`
       downloadPDF(blob, filename)
     } catch (error) {
       console.error("Erro ao gerar PDF:", error)
@@ -225,11 +225,14 @@ export default function ValidarCodigoPage({ params }: { params: Promise<{ codigo
       <header className="border-b bg-background/95 backdrop-blur">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
-            <img
-              src="https://www.rarotec.com.br/assets/logo.png"
-              alt="Rarotec"
-              className="h-8 w-auto"
-            />
+            <span className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-2xl bg-white p-0.5 shadow-sm ring-1 ring-border">
+              <img
+                src="/logo.png"
+                alt="SISGAR"
+                className="h-full w-full object-contain"
+              />
+            </span>
+            <span className="font-semibold text-foreground">SISGAR</span>
           </Link>
           <div className="flex items-center gap-2">
             <Link href="/validar">
@@ -303,7 +306,7 @@ export default function ValidarCodigoPage({ params }: { params: Promise<{ codigo
                 Este relatório foi verificado e é autêntico
               </CardDescription>
               <Badge variant="outline" className="mx-auto mt-2 font-mono text-lg px-4 py-1">
-                {data.relatorio?.numero_autenticacao}
+                {data.relatório?.numero_autenticacao}
               </Badge>
             </CardHeader>
             <CardContent className="pt-6 space-y-6">
@@ -315,8 +318,8 @@ export default function ValidarCodigoPage({ params }: { params: Promise<{ codigo
                   <div>
                     <p className="text-sm font-medium">Data do Relatório</p>
                     <p className="text-muted-foreground">
-                      {data.relatorio?.data_visita 
-                        ? format(new Date(data.relatorio.data_visita), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
+                      {data.relatório?.data_visita 
+                        ? format(new Date(data.relatório.data_visita), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
                         : "-"
                       }
                     </p>
@@ -329,29 +332,29 @@ export default function ValidarCodigoPage({ params }: { params: Promise<{ codigo
                   <div>
                     <p className="text-sm font-medium">Localização</p>
                     <p className="text-muted-foreground">
-                      {data.relatorio?.municipio} - {data.relatorio?.estado}
+                      {data.relatório?.municipio} - {data.relatório?.estado}
                     </p>
                   </div>
                 </div>
 
                 {/* Cliente */}
-                {data.relatorio?.cliente_nome && (
+                {data.relatório?.cliente_nome && (
                   <div className="flex items-start gap-3">
                     <Building2 className="h-5 w-5 text-muted-foreground mt-0.5" />
                     <div>
                       <p className="text-sm font-medium">Cliente</p>
-                      <p className="text-muted-foreground">{data.relatorio.cliente_nome}</p>
+                      <p className="text-muted-foreground">{data.relatório.cliente_nome}</p>
                     </div>
                   </div>
                 )}
 
                 {/* Órgão */}
-                {data.relatorio?.orgao_atendido && (
+                {data.relatório?.orgao_atendido && (
                   <div className="flex items-start gap-3">
                     <Building2 className="h-5 w-5 text-muted-foreground mt-0.5" />
                     <div>
                       <p className="text-sm font-medium">Órgão Atendido</p>
-                      <p className="text-muted-foreground">{data.relatorio.orgao_atendido}</p>
+                      <p className="text-muted-foreground">{data.relatório.orgao_atendido}</p>
                     </div>
                   </div>
                 )}
@@ -360,14 +363,14 @@ export default function ValidarCodigoPage({ params }: { params: Promise<{ codigo
               <Separator />
 
               {/* Técnicos */}
-              {data.relatorio?.tecnicos_rarotec && data.relatorio.tecnicos_rarotec.length > 0 && (
+              {data.relatório?.tecnicos_rarotec && data.relatório.tecnicos_rarotec.length > 0 && (
                 <div>
                   <h3 className="font-medium flex items-center gap-2 mb-3">
                     <User className="h-4 w-4" />
                     Técnico(s) Responsável(is)
                   </h3>
                   <div className="space-y-2">
-                    {data.relatorio.tecnicos_rarotec.map((tec, i) => (
+                    {data.relatório.tecnicos_rarotec.map((tec, i) => (
                       <div key={i} className="bg-muted/50 rounded-lg px-4 py-2">
                         <p className="font-medium">{tec.nome}</p>
                         {tec.email && (
@@ -380,11 +383,11 @@ export default function ValidarCodigoPage({ params }: { params: Promise<{ codigo
               )}
 
               {/* Módulos */}
-              {data.relatorio?.modulos && data.relatorio.modulos.length > 0 && (
+              {data.relatório?.modulos && data.relatório.modulos.length > 0 && (
                 <div>
                   <h3 className="font-medium mb-3">Módulos Atendidos</h3>
                   <div className="flex flex-wrap gap-2">
-                    {data.relatorio.modulos.map((modulo, i) => (
+                    {data.relatório.modulos.map((modulo, i) => (
                       <Badge key={i} variant="secondary">{modulo}</Badge>
                     ))}
                   </div>
@@ -392,10 +395,10 @@ export default function ValidarCodigoPage({ params }: { params: Promise<{ codigo
               )}
 
               {/* Tema/Tipo de Serviço */}
-              {(data.relatorio?.tema || data.relatorio?.tipo_servico) && (
+              {(data.relatório?.tema || data.relatório?.tipo_servico) && (
                 <div>
                   <h3 className="font-medium mb-3">Tipo de Serviço</h3>
-                  <Badge>{data.relatorio.tema || data.relatorio.tipo_servico}</Badge>
+                  <Badge>{data.relatório.tema || data.relatório.tipo_servico}</Badge>
                 </div>
               )}
 
@@ -429,8 +432,8 @@ export default function ValidarCodigoPage({ params }: { params: Promise<{ codigo
               <div className="text-center text-sm text-muted-foreground">
                 <p>
                   Relatório registrado em{" "}
-                  {data.relatorio?.created_at 
-                    ? format(new Date(data.relatorio.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })
+                  {data.relatório?.created_at 
+                    ? format(new Date(data.relatório.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })
                     : "-"
                   }
                 </p>
@@ -557,7 +560,7 @@ function ApuracaoValidacaoCard({ apuracao }: { apuracao: ApuracaoValidada }) {
               label="A/C"
               value={
                 apuracao.destinatario_nome
-                  ? `${apuracao.destinatario_nome}${apuracao.destinatario_cargo ? ` — ${apuracao.destinatario_cargo}` : ""}`
+                  ? `${apuracao.destinatario_nome}${apuracao.destinatario_cargo ? ` - ${apuracao.destinatario_cargo}` : ""}`
                   : undefined
               }
             />

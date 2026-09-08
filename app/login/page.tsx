@@ -4,7 +4,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Suspense, useEffect, useMemo, useRef, useState } from "react"
-import { useTheme } from "next-themes"
+import { useTheme } from "@/components/theme-provider"
 import {
   KeyRound,
   MessagesSquare,
@@ -144,13 +144,13 @@ function LoginContent() {
 
       <div className="w-full max-w-md space-y-8">
         <div className="space-y-4 text-center">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-white shadow-lg">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center overflow-hidden rounded-[22px] bg-white p-0.5 shadow-lg ring-1 ring-white/15">
             <Image
               src="/logo.png"
               alt="SISGAR"
-              width={42}
-              height={42}
-              className="h-auto w-auto"
+              width={56}
+              height={56}
+              className="h-14 w-14 object-contain"
               priority
             />
           </div>

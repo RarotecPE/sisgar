@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { useTheme } from "next-themes"
+import { useTheme } from "@/components/theme-provider"
 import {
   AppWindow,
   CheckCircle2,
   ExternalLink,
+  Grid2X2,
   Loader2,
   LogOut,
   Moon,
@@ -70,7 +71,7 @@ function HeaderIconButton({
       variant="ghost"
       size="icon"
       className={cn(
-        "h-10 w-10 rounded-lg border border-border/70 bg-card/70 text-muted-foreground shadow-sm transition-colors hover:bg-secondary hover:text-foreground",
+        "h-10 w-10 rounded-lg border border-border/80 bg-card/80 text-muted-foreground shadow-sm transition-colors hover:border-primary/40 hover:bg-secondary hover:text-foreground dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-200 dark:hover:border-cyan-400/45 dark:hover:bg-slate-800 dark:hover:text-white",
         className,
       )}
       aria-label={title}
@@ -106,7 +107,7 @@ function ApplicationsMenu() {
     <DropdownMenu onOpenChange={(open) => { if (open && !payload && !loading) void load() }}>
       <DropdownMenuTrigger asChild>
         <HeaderIconButton title="Aplicativos">
-          <AppWindow className="h-4 w-4" />
+          <Grid2X2 className="h-4 w-4" />
         </HeaderIconButton>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-80 p-2">

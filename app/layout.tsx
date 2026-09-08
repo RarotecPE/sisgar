@@ -12,21 +12,9 @@ export const metadata: Metadata = {
   description: 'Sistema de Gestao Administrativa da Rarotec',
   generator: 'v0.app',
   icons: {
-    icon: [
-      {
-        url: '/icon-light-32x32.png',
-        media: '(prefers-color-scheme: light)',
-      },
-      {
-        url: '/icon-dark-32x32.png',
-        media: '(prefers-color-scheme: dark)',
-      },
-      {
-        url: '/icon.svg',
-        type: 'image/svg+xml',
-      },
-    ],
-    apple: '/apple-icon.png',
+    icon: [{ url: '/icon-light-32x32.png?v=2', type: 'image/png', sizes: '32x32' }],
+    shortcut: '/icon-light-32x32.png?v=2',
+    apple: '/apple-icon.png?v=2',
   },
 }
 
@@ -38,12 +26,7 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" className="bg-background" suppressHydrationWarning>
       <body className="font-sans antialiased">
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="dark"
-          enableSystem
-          disableTransitionOnChange
-        >
+        <ThemeProvider defaultTheme="dark">
           {children}
           {process.env.NODE_ENV === 'production' && <Analytics />}
         </ThemeProvider>
