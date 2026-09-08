@@ -315,22 +315,22 @@ export default function DashboardPage() {
                           {s.descricao && `: ${s.descricao}`}
                         </p>
                         
-                        {/* Mostrar detalhes da alteração */}
-                        {isAlteracao && s.evento_data && alteracao?.data_sugerida && (
-                          <p className="text-xs text-blue-600 dark:text-blue-300">
-                            <span className="font-medium">Data:</span> {format(new Date(s.evento_data), "dd/MM/yyyy", { locale: ptBR })} &rarr {format(new Date(alteracao.data_sugerida + 'T12:00:00'), "dd/MM/yyyy", { locale: ptBR })}
-                          </p>
-                        )}
-                        {isAlteracao && s.evento_local !== alteracao?.municipio && alteracao?.municipio && (
-                          <p className="text-xs text-blue-600 dark:text-blue-300">
-                            <span className="font-medium">Local:</span> {s.evento_local || '(vazio)'} &rarr {alteracao.municipio}
-                          </p>
-                        )}
-                        {isAlteracao && s.evento_tipo !== alteracao?.tipo_evento && alteracao?.tipo_evento && (
-                          <p className="text-xs text-blue-600 dark:text-blue-300">
-                            <span className="font-medium">Tipo:</span> {s.evento_tipo || '(vazio)'} &rarr {tipoLabel}
-                          </p>
-                        )}
+                    {/* Mostrar detalhes da alteração */}
+                    {isAlteracao && s.evento_data && alteracao?.data_sugerida && (
+                      <p className="text-xs text-blue-600 dark:text-blue-300">
+                        <span className="font-medium">Data:</span> {format(new Date(s.evento_data), "dd/MM/yyyy", { locale: ptBR })} &rarr; {format(new Date(alteracao.data_sugerida + 'T12:00:00'), "dd/MM/yyyy", { locale: ptBR })}
+                      </p>
+                    )}
+                    {isAlteracao && s.evento_local !== alteracao?.municipio && alteracao?.municipio && (
+                      <p className="text-xs text-blue-600 dark:text-blue-300">
+                        <span className="font-medium">Local:</span> {s.evento_local || '(vazio)'} &rarr; {alteracao.municipio}
+                      </p>
+                    )}
+                    {isAlteracao && s.evento_tipo !== alteracao?.tipo_evento && alteracao?.tipo_evento && (
+                      <p className="text-xs text-blue-600 dark:text-blue-300">
+                        <span className="font-medium">Tipo:</span> {s.evento_tipo || '(vazio)'} &rarr; {tipoLabel}
+                      </p>
+                    )}
                         
                         {/* Para novos agendamentos */}
                         {s.tipo_solicitacao === 'novo' && (
