@@ -28,7 +28,7 @@ type NexusUser = {
   avatar_url?: string | null
 }
 
-type NexusRole = {
+export type NexusRole = {
   id?: string
   nome: string
   chave: string
@@ -70,7 +70,7 @@ function getEnv(name: string, fallback?: string) {
   return value
 }
 
-function mapRoleToCargo(role: NexusRole) {
+export function mapRoleToCargo(role: NexusRole) {
   const normalized = role.chave.trim().toLowerCase()
   if (normalized === "nao_autorizado") return null
   return ROLE_TO_CARGO[normalized] ?? role.nome ?? null
@@ -166,7 +166,7 @@ async function syncLocalUser(session: NexusSession): Promise<User | null> {
   if (existing.length > 0) {
     const [updated] = await sql`
       UPDATE usuarios
-      SET nome = ${nome}, email = ${email}, cargo = COALESCE(usuarios.cargo, ${cargo}), updated_at = CURRENT_TIMESTAMP
+      SET nome = ${nome}, email = ${email}, cargo = ${cargo}, updated_at = CURRENT_TIMESTAMP
       WHERE id = ${existing[0].id}
       RETURNING id, nome, email, cargo, ativo, apuracao_mensal
     `

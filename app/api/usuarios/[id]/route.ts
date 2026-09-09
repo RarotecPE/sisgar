@@ -50,18 +50,17 @@ export async function PUT(
     const { id } = await params
     const parsedId = parseInt(id)
     const body = await request.json()
-    const { nome, email, cargo, ativo, apuracao_mensal } = body
-
-    if (!nome || !email || !cargo) {
-      return NextResponse.json({ error: "Nome, e-mail e cargo são obrigatórios." }, { status: 400 })
+    const { nome, email, ativo, apuracao_mensal } = body
+    if (!nome || !email) {
+      return NextResponse.json({ error: "Nome e e-mail são obrigatórios." }, { status: 400 })
     }
-    if ((cargo === "Administrador" || await isTargetAdmin(parsedId)) && !isAdmin(auth.user.cargo)) {
+    if ((await isTargetAdmin(parsedId)) && !isAdmin(auth.user.cargo)) {
       return NextResponse.json({ error: "Apenas administradores podem editar administradores." }, { status: 403 })
     }
 
     const result = await sql`
       UPDATE usuarios
-      SET nome = ${nome}, email = ${email.toLowerCase()}, cargo = ${cargo}, ativo = ${ativo},
+      SET nome = ${nome}, email = ${email.toLowerCase()}, ativo = ${ativo},
           apuracao_mensal = COALESCE(${apuracao_mensal ?? null}, apuracao_mensal),
           updated_at = CURRENT_TIMESTAMP
       WHERE id = ${parsedId}

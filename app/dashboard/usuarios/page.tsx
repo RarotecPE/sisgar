@@ -23,13 +23,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -63,16 +56,6 @@ interface Usuario {
   created_at: string
 }
 
-const CARGOS_USUARIO = [
-  "Administrador",
-  "Diretor",
-  "Gerente",
-  "Coordenação",
-  "Operador",
-  "Estagiário",
-  "Funcionário",
-  "Técnico",
-]
 
 const fetcher = async (url: string) => {
   const response = await fetch(url, { cache: "no-store" })
@@ -87,7 +70,8 @@ export default function UsuariosPage() {
   const userIsAdmin = user?.cargo?.toLowerCase() === "administrador"
 
   const { data: usuarios, mutate, isLoading, error } = useSWR<Usuario[]>("/api/usuarios", fetcher, {
-    revalidateOnFocus: false,
+    revalidateOnFocus: true,
+    refreshInterval: 30_000,
   })
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [editingUser, setEditingUser] = useState<Usuario | null>(null)
@@ -123,7 +107,6 @@ export default function UsuariosPage() {
 
   const isTargetAdmin = (usuario: Usuario) => usuario.cargo?.toLowerCase() === "administrador"
   const canEditUser = (usuario: Usuario) => !isTargetAdmin(usuario) || userIsAdmin
-  const canSetAdminRole = () => userIsAdmin
 
   const handleEdit = (usuario: Usuario) => {
     setEditingUser(usuario)
@@ -150,10 +133,6 @@ export default function UsuariosPage() {
   }
 
   const handleSubmit = async () => {
-    if (formData.cargo === "Administrador" && !userIsAdmin) {
-      alert("Apenas administradores podem definir o cargo de Administrador.")
-      return
-    }
     if (editingUser && isTargetAdmin(editingUser) && !userIsAdmin) {
       alert("Apenas administradores podem editar outros administradores.")
       return
@@ -161,10 +140,16 @@ export default function UsuariosPage() {
 
     setLoading(true)
     try {
+      const payload = {
+        nome: formData.nome,
+        email: formData.email,
+        ativo: formData.ativo,
+        apuracao_mensal: formData.apuracao_mensal,
+      }
       const response = await fetch(editingUser ? `/api/usuarios/${editingUser.id}` : "/api/usuarios", {
         method: editingUser ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       })
       const data = await response.json().catch(() => null)
       if (!response.ok) throw new Error(data?.error || "Erro ao salvar usuário.")
@@ -199,7 +184,7 @@ export default function UsuariosPage() {
         <div>
           <h1 className="text-2xl font-semibold text-foreground">Usuários</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Configure permissões complementares do Sisgar. Login e senha são geridos pelo RaroNexus.
+            Configure dados complementares do Sisgar. Login, senha e perfil são geridos pelo RaroNexus.
           </p>
         </div>
         <Button onClick={handleNew} className="w-full sm:w-auto">
@@ -363,7 +348,7 @@ export default function UsuariosPage() {
           <DialogHeader>
             <DialogTitle>{editingUser ? "Editar configuração" : "Nova configuração local"}</DialogTitle>
             <DialogDescription>
-              O usuário deve existir e autenticar pelo RaroNexus. Estes campos ajustam apenas permissões do Sisgar.
+              O usuário deve existir e autenticar pelo RaroNexus. Estes campos ajustam apenas dados complementares do Sisgar.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -386,16 +371,12 @@ export default function UsuariosPage() {
             </div>
             <div className="space-y-2">
               <Label>Cargo</Label>
-              <Select value={formData.cargo} onValueChange={(value) => setFormData({ ...formData, cargo: value })}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {CARGOS_USUARIO.filter((cargo) => cargo !== "Administrador" || canSetAdminRole()).map((cargo) => (
-                    <SelectItem key={cargo} value={cargo}>{cargo}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+                {formData.cargo || "Será sincronizado pelo RaroNexus"}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                O cargo é definido no RaroNexus.
+              </p>
             </div>
             <div className="flex items-center justify-between gap-3 rounded-lg border border-border p-3">
               <div className="leading-tight">
