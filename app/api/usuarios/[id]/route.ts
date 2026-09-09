@@ -25,7 +25,7 @@ export async function GET(
 
     const { id } = await params
     const usuarios = await sql`
-      SELECT id, nome, email, cargo, ativo, apuracao_mensal, created_at, updated_at
+      SELECT id, nexus_user_id, nexus_email, nome, email, cargo, ativo, apuracao_mensal, created_at, updated_at
       FROM usuarios
       WHERE id = ${parseInt(id)}
     `
@@ -50,9 +50,16 @@ export async function PUT(
     const { id } = await params
     const parsedId = parseInt(id)
     const body = await request.json()
-    const { nome, email, ativo, apuracao_mensal } = body
+    const { nome, email, nexus_email, ativo, apuracao_mensal } = body
     if (!nome || !email) {
       return NextResponse.json({ error: "Nome e e-mail são obrigatórios." }, { status: 400 })
+    }
+    const nexusEmail = typeof nexus_email === "string" && nexus_email.trim() ? nexus_email.trim().toLowerCase() : null
+    if (nexusEmail) {
+      const existingNexusEmail = await sql`SELECT id FROM usuarios WHERE LOWER(nexus_email) = ${nexusEmail} AND id <> ${parsedId} LIMIT 1`
+      if (existingNexusEmail.length > 0) {
+        return NextResponse.json({ error: "E-mail do Nexus já vinculado a outro usuário." }, { status: 400 })
+      }
     }
     if ((await isTargetAdmin(parsedId)) && !isAdmin(auth.user.cargo)) {
       return NextResponse.json({ error: "Apenas administradores podem editar administradores." }, { status: 403 })
@@ -60,11 +67,13 @@ export async function PUT(
 
     const result = await sql`
       UPDATE usuarios
-      SET nome = ${nome}, email = ${email.toLowerCase()}, ativo = ${ativo},
+      SET nexus_user_id = CASE WHEN COALESCE(nexus_email, '') <> COALESCE(${nexusEmail}, '') THEN NULL ELSE nexus_user_id END,
+          nexus_email = ${nexusEmail},
+          nome = ${nome}, email = ${email.toLowerCase()}, ativo = ${ativo},
           apuracao_mensal = COALESCE(${apuracao_mensal ?? null}, apuracao_mensal),
           updated_at = CURRENT_TIMESTAMP
       WHERE id = ${parsedId}
-      RETURNING id, nome, email, cargo, ativo, apuracao_mensal, created_at, updated_at
+      RETURNING id, nexus_user_id, nexus_email, nome, email, cargo, ativo, apuracao_mensal, created_at, updated_at
     `
 
     if (result.length === 0) {

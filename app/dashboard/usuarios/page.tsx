@@ -50,6 +50,7 @@ interface Usuario {
   id: number
   nome: string
   email: string
+  nexus_email: string | null
   cargo: string | null
   ativo: boolean
   apuracao_mensal: boolean
@@ -79,6 +80,7 @@ export default function UsuariosPage() {
   const [formData, setFormData] = useState({
     nome: "",
     email: "",
+    nexus_email: "",
     cargo: "Operador",
     ativo: true,
     apuracao_mensal: false,
@@ -113,6 +115,7 @@ export default function UsuariosPage() {
     setFormData({
       nome: usuario.nome,
       email: usuario.email,
+      nexus_email: usuario.nexus_email || "",
       cargo: usuario.cargo || "Operador",
       ativo: usuario.ativo,
       apuracao_mensal: usuario.apuracao_mensal ?? false,
@@ -125,6 +128,7 @@ export default function UsuariosPage() {
     setFormData({
       nome: "",
       email: "",
+      nexus_email: "",
       cargo: "Operador",
       ativo: true,
       apuracao_mensal: false,
@@ -143,6 +147,7 @@ export default function UsuariosPage() {
       const payload = {
         nome: formData.nome,
         email: formData.email,
+        nexus_email: formData.nexus_email,
         ativo: formData.ativo,
         apuracao_mensal: formData.apuracao_mensal,
       }
@@ -368,6 +373,18 @@ export default function UsuariosPage() {
                 onChange={(event) => setFormData({ ...formData, email: event.target.value })}
                 placeholder="email@exemplo.com"
               />
+            </div>
+            <div className="space-y-2">
+              <Label>E-mail do Nexus</Label>
+              <Input
+                type="email"
+                value={formData.nexus_email}
+                onChange={(event) => setFormData({ ...formData, nexus_email: event.target.value })}
+                placeholder="Preencha apenas se for diferente do e-mail local"
+              />
+              <p className="text-xs text-muted-foreground">
+                Se ficar vazio, o Sisgar usa o e-mail local para vincular com o RaroNexus.
+              </p>
             </div>
             <div className="space-y-2">
               <Label>Cargo</Label>

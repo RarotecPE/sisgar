@@ -154,40 +154,44 @@ async function syncLocalUser(session: NexusSession): Promise<User | null> {
   const cargo = mapRoleToCargo(session.role)
   if (!cargo) return null
 
+  const nexusUserId = session.user.id
   const email = normalizeEmail(session.user.email)
   const nome = session.user.nome || email
   const existing = await sql`
-    SELECT id, nome, email, cargo, ativo, apuracao_mensal
+    SELECT id, nexus_user_id, nexus_email, nome, email, cargo, ativo, apuracao_mensal
     FROM usuarios
-    WHERE LOWER(email) = ${email}
+    WHERE nexus_user_id = ${nexusUserId}::uuid OR LOWER(nexus_email) = ${email} OR LOWER(email) = ${email}
+    ORDER BY CASE WHEN nexus_user_id = ${nexusUserId}::uuid THEN 0 ELSE 1 END
     LIMIT 1
   `
 
   if (existing.length > 0) {
     const [updated] = await sql`
       UPDATE usuarios
-      SET nome = ${nome}, email = ${email}, cargo = ${cargo}, updated_at = CURRENT_TIMESTAMP
+      SET nexus_user_id = ${nexusUserId}::uuid,
+          nexus_email = ${email},
+          nome = ${nome},
+          cargo = ${cargo},
+          ativo = true,
+          updated_at = CURRENT_TIMESTAMP
       WHERE id = ${existing[0].id}
-      RETURNING id, nome, email, cargo, ativo, apuracao_mensal
+      RETURNING id, nexus_user_id, nexus_email, nome, email, cargo, ativo, apuracao_mensal
     `
-    if (!updated.ativo) return null
     return {
       ...updated,
-      nexus_user_id: session.user.id,
       avatar_url: session.user.avatar_url ?? null,
     } as User
   }
 
   const senhaHash = `raronexus:${crypto.randomUUID()}`
   const [created] = await sql`
-    INSERT INTO usuarios (nome, email, senha_hash, cargo, ativo, apuracao_mensal)
-    VALUES (${nome}, ${email}, ${senhaHash}, ${cargo}, true, false)
-    RETURNING id, nome, email, cargo, ativo, apuracao_mensal
+    INSERT INTO usuarios (nexus_user_id, nexus_email, nome, email, senha_hash, cargo, ativo, apuracao_mensal)
+    VALUES (${nexusUserId}::uuid, ${email}, ${nome}, ${email}, ${senhaHash}, ${cargo}, true, false)
+    RETURNING id, nexus_user_id, nexus_email, nome, email, cargo, ativo, apuracao_mensal
   `
 
   return {
     ...created,
-    nexus_user_id: session.user.id,
     avatar_url: session.user.avatar_url ?? null,
   } as User
 }

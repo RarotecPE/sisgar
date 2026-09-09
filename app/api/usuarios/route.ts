@@ -48,31 +48,68 @@ async function syncAuthorizedNexusUsers() {
     throw new Error(payload?.message || "Não foi possível sincronizar usuários do RaroNexus.")
   }
 
+  const authorizedNexusIds = new Set<string>()
+  const authorizedEmails = new Set<string>()
+
   for (const nexusUser of payload.data) {
+    const nexusUserId = nexusUser.id
     const email = nexusUser.email?.trim().toLowerCase()
     const cargo = mapRoleToCargo({
       chave: nexusUser.role_chave || "",
       nome: nexusUser.role_nome || "",
     })
 
-    if (!email || !cargo) continue
+    if (!nexusUserId || !email || !cargo) continue
+
+    authorizedNexusIds.add(nexusUserId)
+    authorizedEmails.add(email)
 
     const nome = nexusUser.nome || email
-    const existing = await sql`SELECT id FROM usuarios WHERE LOWER(email) = ${email} LIMIT 1`
+    const existing = await sql`
+      SELECT id
+      FROM usuarios
+      WHERE nexus_user_id = ${nexusUserId}::uuid OR LOWER(nexus_email) = ${email} OR LOWER(email) = ${email}
+      ORDER BY CASE WHEN nexus_user_id = ${nexusUserId}::uuid THEN 0 ELSE 1 END
+      LIMIT 1
+    `
 
     if (existing.length > 0) {
       await sql`
         UPDATE usuarios
-        SET nome = ${nome}, cargo = ${cargo}, updated_at = CURRENT_TIMESTAMP
+        SET nexus_user_id = ${nexusUserId}::uuid,
+            nexus_email = ${email},
+            nome = ${nome},
+            cargo = ${cargo},
+            ativo = true,
+            updated_at = CURRENT_TIMESTAMP
         WHERE id = ${existing[0].id}
       `
       continue
     }
 
+
     const senhaHash = `raronexus:${crypto.randomUUID()}`
     await sql`
-      INSERT INTO usuarios (nome, email, senha_hash, cargo, ativo, apuracao_mensal)
-      VALUES (${nome}, ${email}, ${senhaHash}, ${cargo}, true, false)
+      INSERT INTO usuarios (nexus_user_id, nexus_email, nome, email, senha_hash, cargo, ativo, apuracao_mensal)
+      VALUES (${nexusUserId}::uuid, ${email}, ${nome}, ${email}, ${senhaHash}, ${cargo}, true, false)
+    `
+  }
+
+  const localUsers = await sql`SELECT id, nexus_user_id, nexus_email, email FROM usuarios`
+  for (const localUser of localUsers) {
+    const nexusUserId = String(localUser.nexus_user_id || "")
+    const nexusEmail = String(localUser.nexus_email || "").trim().toLowerCase()
+    const email = String(localUser.email || "").trim().toLowerCase()
+    const isAuthorized = nexusUserId
+      ? authorizedNexusIds.has(nexusUserId)
+      : Boolean((nexusEmail && authorizedEmails.has(nexusEmail)) || (!nexusEmail && email && authorizedEmails.has(email)))
+
+    if (isAuthorized) continue
+
+    await sql`
+      UPDATE usuarios
+      SET ativo = false, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ${localUser.id}
     `
   }
 }
@@ -87,7 +124,7 @@ export async function GET() {
     })
 
     const usuarios = await sql`
-      SELECT id, nome, email, cargo, ativo, apuracao_mensal, created_at, updated_at
+      SELECT id, nexus_user_id, nexus_email, nome, email, cargo, ativo, apuracao_mensal, created_at, updated_at
       FROM usuarios
       ORDER BY nome
     `
@@ -104,21 +141,23 @@ export async function POST(request: NextRequest) {
     if ("response" in auth) return auth.response
 
     const body = await request.json()
-    const { nome, email, ativo, apuracao_mensal } = body
+    const { nome, email, nexus_email, ativo, apuracao_mensal } = body
     if (!nome || !email) {
       return NextResponse.json({ error: "Nome e e-mail são obrigatórios." }, { status: 400 })
     }
 
+    const nexusEmail = typeof nexus_email === "string" && nexus_email.trim() ? nexus_email.trim().toLowerCase() : null
     const existente = await sql`SELECT id FROM usuarios WHERE LOWER(email) = LOWER(${email}) LIMIT 1`
     if (existente.length > 0) {
       return NextResponse.json({ error: "E-mail já cadastrado." }, { status: 400 })
     }
 
+
     const senhaHash = `raronexus:${crypto.randomUUID()}`
     const result = await sql`
-      INSERT INTO usuarios (nome, email, senha_hash, cargo, ativo, apuracao_mensal)
-      VALUES (${nome}, ${email.toLowerCase()}, ${senhaHash}, ${"Pendente no RaroNexus"}, ${ativo ?? true}, ${apuracao_mensal ?? false})
-      RETURNING id, nome, email, cargo, ativo, apuracao_mensal, created_at
+      INSERT INTO usuarios (nexus_email, nome, email, senha_hash, cargo, ativo, apuracao_mensal)
+      VALUES (${nexusEmail}, ${nome}, ${email.toLowerCase()}, ${senhaHash}, ${"Pendente no RaroNexus"}, ${ativo ?? true}, ${apuracao_mensal ?? false})
+      RETURNING id, nexus_user_id, nexus_email, nome, email, cargo, ativo, apuracao_mensal, created_at
     `
 
     return NextResponse.json(result[0])
