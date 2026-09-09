@@ -29,12 +29,21 @@ function applyTheme(theme: Theme) {
 }
 
 export function ThemeProvider({ children, defaultTheme = "dark" }: ThemeProviderProps) {
-  const [theme, setThemeState] = React.useState<Theme>(() => getStoredTheme(defaultTheme))
+  const [theme, setThemeState] = React.useState<Theme>(defaultTheme)
+  const [mounted, setMounted] = React.useState(false)
 
   React.useEffect(() => {
+    const storedTheme = getStoredTheme(defaultTheme)
+    setThemeState(storedTheme)
+    applyTheme(storedTheme)
+    setMounted(true)
+  }, [defaultTheme])
+
+  React.useEffect(() => {
+    if (!mounted) return
     applyTheme(theme)
     window.localStorage.setItem(STORAGE_KEY, theme)
-  }, [theme])
+  }, [mounted, theme])
 
   const setTheme = React.useCallback((nextTheme: Theme) => {
     setThemeState(nextTheme)

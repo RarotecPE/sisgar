@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -17,7 +17,8 @@ import {
   ShieldAlert,
   Loader2,
   Users,
-  Database
+  Database,
+  ExternalLink,
 } from "lucide-react"
 import {
   Dialog,
@@ -50,6 +51,14 @@ const TABELAS_DISPONIVEIS = [
 export default function ConfiguracoesPage() {
   const { user, isAdmin } = useSession()
   const userIsGestor = user?.nome ? isGestor(user.nome, user.cargo) : false
+  const [nexusProfileUrl, setNexusProfileUrl] = useState<string | null>(null)
+
+  useEffect(() => {
+    fetch("/api/auth/applications", { cache: "no-store" })
+      .then((response) => response.json())
+      .then((data) => setNexusProfileUrl(data.nexusProfileUrl || null))
+      .catch(() => setNexusProfileUrl(null))
+  }, [])
 
   // Estados para limpeza de dados
   const [limparDialogOpen, setLimparDialogOpen] = useState(false)
@@ -225,15 +234,21 @@ export default function ConfiguracoesPage() {
               <div>
                 <CardTitle className="text-base font-medium">Conta RaroNexus</CardTitle>
                 <CardDescription>
-                  Login e senha são gerenciados pela central RaroNexus.
+                  Login, senha e dados de perfil são gerenciados pela central RaroNexus.
                 </CardDescription>
               </div>
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Para alterar seus dados de perfil ou senha, use o menu do avatar no cabeçalho e abra seu perfil no RaroNexus.
+              Use o botão abaixo para abrir seu perfil no RaroNexus e editar seus dados de conta.
             </p>
+            <Button asChild variant="outline" className="w-full justify-center gap-2 sm:w-auto">
+              <a href={nexusProfileUrl || "#"} target="_blank" rel="noreferrer" aria-disabled={!nexusProfileUrl}>
+                <ExternalLink className="h-4 w-4" />
+                Editar perfil RaroNexus
+              </a>
+            </Button>
           </CardContent>
         </Card>
 
