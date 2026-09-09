@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Badge } from "@/components/ui/badge"
-import { Loader2, X, Check, ChevronsUpDown } from "lucide-react"
+import { Loader2, X, Check, ChevronsUpDown, Sparkles } from "lucide-react"
 import { MaskedInput } from "@/components/masked-input"
 import { CARGOS_RAROTEC, ESTADOS_BR, DEPARTAMENTOS_PADRAO } from "@/lib/constants"
 import {
@@ -42,6 +42,20 @@ interface Cliente {
   ativo?: boolean
 }
 
+export interface CandidatoNexus {
+  nexus_id: string
+  nome: string
+  email: string
+  nexus_email: string
+  cpf: string | null
+  telefone: string | null
+  avatar_url: string | null
+  cargo: string | null
+  role_nome: string | null
+  ja_cadastrado: boolean
+  tecnico_id: number | null
+}
+
 const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
 interface TecnicoFormProps {
@@ -56,6 +70,15 @@ export function TecnicoForm({ tecnico, onSuccess, onCancel }: TecnicoFormProps) 
   const [openDepartamento, setOpenDepartamento] = useState(false)
   const [openClientesFixos, setOpenClientesFixos] = useState(false)
   const [clientesFixos, setClientesFixos] = useState<number[]>([])
+
+  const [selectedNexusUser, setSelectedNexusUser] = useState<CandidatoNexus | null>(null)
+  const [openNexusCombobox, setOpenNexusCombobox] = useState(false)
+
+  // Candidatos autorizados do RaroNexus para vincular como técnico
+  const { data: candidatos, isLoading: loadingCandidatos } = useSWR<CandidatoNexus[]>(
+    !tecnico ? "/api/nexus/candidatos-tecnicos" : null,
+    fetcher
+  )
 
   // Lista de clientes ativos para o multiselect de relatorio semanal unico
   const { data: clientes } = useSWR<Cliente[]>("/api/clientes", fetcher)
@@ -91,11 +114,27 @@ export function TecnicoForm({ tecnico, onSuccess, onCancel }: TecnicoFormProps) 
     telefone: tecnico?.telefone || "",
     celular: tecnico?.celular || "",
     email: tecnico?.email || "",
+    nexus_email: tecnico?.nexus_email || "",
+    cargo: tecnico?.cargo || "",
     cargos: tecnico?.cargos || [],
     data_admissao: tecnico?.data_admissao?.split("T")[0] || "",
     setores: tecnico?.setores || [],
+    foto_url: tecnico?.foto_url || "",
     ativo: tecnico?.ativo ?? true,
   })
+
+  const handleSelectNexusUser = (candidato: CandidatoNexus) => {
+    setSelectedNexusUser(candidato)
+    setFormData((prev) => ({
+      ...prev,
+      nome: candidato.nome,
+      email: candidato.email,
+      nexus_email: candidato.email,
+      cpf: candidato.cpf || prev.cpf,
+      telefone: candidato.telefone || prev.telefone,
+      foto_url: candidato.avatar_url || prev.foto_url,
+    }))
+  }
 
   const toggleCargo = (cargo: string) => {
     if (formData.cargos.includes(cargo)) {
@@ -133,6 +172,9 @@ export function TecnicoForm({ tecnico, onSuccess, onCancel }: TecnicoFormProps) 
 
       const payload = {
         ...formData,
+        foto_url: formData.foto_url || null,
+        email: formData.email ? formData.email.trim() : null,
+        nexus_email: formData.nexus_email ? formData.nexus_email.trim() : null,
         data_nascimento: formData.data_nascimento || null,
         data_admissao: formData.data_admissao || null,
         clientes_fixos: clientesFixos,
@@ -144,12 +186,15 @@ export function TecnicoForm({ tecnico, onSuccess, onCancel }: TecnicoFormProps) 
         body: JSON.stringify(payload),
       })
 
-      if (!res.ok) throw new Error("Erro ao salvar")
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => null)
+        throw new Error(errorData?.error || "Erro ao salvar")
+      }
 
       onSuccess()
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error saving tecnico:", error)
-      alert("Erro ao salvar tecnico")
+      alert(error.message || "Erro ao salvar tecnico")
     } finally {
       setLoading(false)
     }
@@ -157,6 +202,118 @@ export function TecnicoForm({ tecnico, onSuccess, onCancel }: TecnicoFormProps) 
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      {/* Seleção de Usuário do RaroNexus para novo cadastro */}
+      {!tecnico && (
+        <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-primary" />
+              <Label className="font-semibold text-base text-foreground">
+                Vincular Usuário do RaroNexus *
+              </Label>
+            </div>
+            {selectedNexusUser && (
+              <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
+                Sincronizado
+              </Badge>
+            )}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Selecione o usuário autorizado no RaroNexus para carregar automaticamente nome, e-mail, cargo, foto, CPF e telefone.
+          </p>
+
+          <Popover open={openNexusCombobox} onOpenChange={setOpenNexusCombobox}>
+            <PopoverTrigger asChild>
+              <Button
+                type="button"
+                variant="outline"
+                role="combobox"
+                aria-expanded={openNexusCombobox}
+                className="w-full justify-between bg-background"
+                disabled={loadingCandidatos}
+              >
+                {selectedNexusUser ? (
+                  <div className="flex items-center gap-2 truncate">
+                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+                      {selectedNexusUser.nome.charAt(0).toUpperCase()}
+                    </div>
+                    <span className="font-medium">{selectedNexusUser.nome}</span>
+                    <span className="text-xs text-muted-foreground">({selectedNexusUser.email})</span>
+                  </div>
+                ) : loadingCandidatos ? (
+                  "Carregando usuários do RaroNexus..."
+                ) : (
+                  "Clique para selecionar um usuário do RaroNexus..."
+                )}
+                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+              <Command>
+                <CommandInput placeholder="Buscar por nome ou e-mail..." />
+                <CommandList>
+                  <CommandEmpty>Nenhum usuário encontrado no RaroNexus.</CommandEmpty>
+                  <CommandGroup>
+                    {(candidatos || []).map((cand) => (
+                      <CommandItem
+                        key={cand.nexus_id}
+                        value={`${cand.nome} ${cand.email}`}
+                        onSelect={() => {
+                          handleSelectNexusUser(cand)
+                          setOpenNexusCombobox(false)
+                        }}
+                        className="flex items-center justify-between py-2 cursor-pointer"
+                      >
+                        <div className="flex items-center gap-2 truncate">
+                          <Check
+                            className={cn(
+                              "h-4 w-4 shrink-0",
+                              selectedNexusUser?.nexus_id === cand.nexus_id ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          <div className="flex flex-col truncate">
+                            <span className="font-medium truncate">{cand.nome}</span>
+                            <span className="text-xs text-muted-foreground truncate">{cand.email}</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          {cand.ja_cadastrado ? (
+                            <Badge variant="secondary" className="text-[10px] bg-amber-100 text-amber-800 hover:bg-amber-100">
+                              Já cadastrado
+                            </Badge>
+                          ) : cand.cargo ? (
+                            <Badge variant="outline" className="text-[10px]">
+                              {cand.cargo}
+                            </Badge>
+                          ) : null}
+                        </div>
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
+
+          {selectedNexusUser && (
+            <div className="rounded-lg border bg-background/80 p-3 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold text-sm">
+                {selectedNexusUser.nome.charAt(0).toUpperCase()}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-foreground truncate">{selectedNexusUser.nome}</p>
+                <p className="text-xs text-muted-foreground truncate">{selectedNexusUser.email}</p>
+              </div>
+              {selectedNexusUser.cargo && (
+                <Badge variant="secondary" className="shrink-0">
+                  {selectedNexusUser.cargo}
+                </Badge>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Dados Pessoais */}
       <div className="space-y-4">
         <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
@@ -217,6 +374,21 @@ export function TecnicoForm({ tecnico, onSuccess, onCancel }: TecnicoFormProps) 
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               className="mt-1.5"
             />
+          </div>
+
+          <div>
+            <Label htmlFor="nexus_email">E-mail do Nexus</Label>
+            <Input
+              id="nexus_email"
+              type="email"
+              value={formData.nexus_email}
+              onChange={(e) => setFormData({ ...formData, nexus_email: e.target.value })}
+              placeholder="Preencha apenas se for diferente do e-mail local"
+              className="mt-1.5"
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              Se ficar vazio, o Sisgar usa o e-mail local para vincular com o RaroNexus.
+            </p>
           </div>
 
           <div>
@@ -362,13 +534,20 @@ export function TecnicoForm({ tecnico, onSuccess, onCancel }: TecnicoFormProps) 
                 {formData.cargos.map((cargo) => (
                   <Badge key={cargo} variant="secondary" className="text-xs">
                     {cargo}
-                    <button
-                      type="button"
+                    <span
+                      role="button"
+                      tabIndex={0}
                       onClick={() => removeCargo(cargo)}
-                      className="ml-1 hover:text-destructive"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault()
+                          removeCargo(cargo)
+                        }
+                      }}
+                      className="ml-1 hover:text-destructive cursor-pointer inline-flex items-center"
                     >
                       <X className="h-3 w-3" />
-                    </button>
+                    </span>
                   </Badge>
                 ))}
               </div>
@@ -436,13 +615,20 @@ export function TecnicoForm({ tecnico, onSuccess, onCancel }: TecnicoFormProps) 
                 {formData.setores.map((depto) => (
                   <Badge key={depto} variant="secondary" className="text-xs">
                     {depto}
-                    <button
-                      type="button"
+                    <span
+                      role="button"
+                      tabIndex={0}
                       onClick={() => removeDepartamento(depto)}
-                      className="ml-1 hover:text-destructive"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault()
+                          removeDepartamento(depto)
+                        }
+                      }}
+                      className="ml-1 hover:text-destructive cursor-pointer inline-flex items-center"
                     >
                       <X className="h-3 w-3" />
-                    </button>
+                    </span>
                   </Badge>
                 ))}
               </div>
@@ -523,13 +709,20 @@ export function TecnicoForm({ tecnico, onSuccess, onCancel }: TecnicoFormProps) 
                 return (
                   <Badge key={id} variant="secondary" className="text-xs">
                     {cliente ? nomeCliente(cliente) : `Cliente ${id}`}
-                    <button
-                      type="button"
+                    <span
+                      role="button"
+                      tabIndex={0}
                       onClick={() => toggleClienteFixo(id)}
-                      className="ml-1 hover:text-destructive"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault()
+                          toggleClienteFixo(id)
+                        }
+                      }}
+                      className="ml-1 hover:text-destructive cursor-pointer inline-flex items-center"
                     >
                       <X className="h-3 w-3" />
-                    </button>
+                    </span>
                   </Badge>
                 )
               })}

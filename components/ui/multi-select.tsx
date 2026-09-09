@@ -52,12 +52,12 @@ export function MultiSelect({
     }
   }
 
-  const removeOption = (option: string, e: React.MouseEvent) => {
+  const removeOption = (option: string, e: React.MouseEvent | React.KeyboardEvent) => {
     e.stopPropagation()
     onChange(selected.filter(s => s !== option))
   }
 
-  const clearAll = (e: React.MouseEvent) => {
+  const clearAll = (e: React.MouseEvent | React.KeyboardEvent) => {
     e.stopPropagation()
     onChange([])
   }
@@ -85,12 +85,20 @@ export function MultiSelect({
                   className="mr-1 mb-1 gap-1 font-normal"
                 >
                   {item}
-                  <button
-                    className="ml-1 hover:text-destructive"
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    className="ml-1 inline-flex items-center cursor-pointer hover:text-destructive"
                     onClick={(e) => removeOption(item, e)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault()
+                        removeOption(item, e)
+                      }
+                    }}
                   >
                     <X className="h-3 w-3" />
-                  </button>
+                  </span>
                 </Badge>
               ))
             ) : (
@@ -101,12 +109,20 @@ export function MultiSelect({
           </div>
           <div className="flex items-center gap-1 ml-2">
             {selected.length > 0 && (
-              <button
-                className="hover:text-destructive p-1"
+              <span
+                role="button"
+                tabIndex={0}
+                className="inline-flex items-center cursor-pointer hover:text-destructive p-1"
                 onClick={clearAll}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault()
+                    clearAll(e)
+                  }
+                }}
               >
                 <X className="h-4 w-4" />
-              </button>
+              </span>
             )}
             <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
           </div>

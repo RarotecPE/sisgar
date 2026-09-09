@@ -11,6 +11,8 @@ export interface TecnicoRarotec {
   telefone: string | null
   celular: string | null
   email: string | null
+  nexus_email?: string | null
+  cargo?: string | null
   cargos: string[]
   data_admissao: string | null
   setores: string[]

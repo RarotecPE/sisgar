@@ -123,21 +123,9 @@ export default function UsuariosPage() {
     setIsFormOpen(true)
   }
 
-  const handleNew = () => {
-    setEditingUser(null)
-    setFormData({
-      nome: "",
-      email: "",
-      nexus_email: "",
-      cargo: "Operador",
-      ativo: true,
-      apuracao_mensal: false,
-    })
-    setIsFormOpen(true)
-  }
-
   const handleSubmit = async () => {
-    if (editingUser && isTargetAdmin(editingUser) && !userIsAdmin) {
+    if (!editingUser) return
+    if (isTargetAdmin(editingUser) && !userIsAdmin) {
       alert("Apenas administradores podem editar outros administradores.")
       return
     }
@@ -151,8 +139,8 @@ export default function UsuariosPage() {
         ativo: formData.ativo,
         apuracao_mensal: formData.apuracao_mensal,
       }
-      const response = await fetch(editingUser ? `/api/usuarios/${editingUser.id}` : "/api/usuarios", {
-        method: editingUser ? "PUT" : "POST",
+      const response = await fetch(`/api/usuarios/${editingUser.id}`, {
+        method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       })
@@ -189,13 +177,9 @@ export default function UsuariosPage() {
         <div>
           <h1 className="text-2xl font-semibold text-foreground">Usuários</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Configure dados complementares do Sisgar. Login, senha e perfil são geridos pelo RaroNexus.
+            Usuários e acessos são gerenciados pelo RaroNexus e sincronizados automaticamente. Configure aqui apenas dados complementares do Sisgar.
           </p>
         </div>
-        <Button onClick={handleNew} className="w-full sm:w-auto">
-          <Plus className="mr-2 h-4 w-4" />
-          Nova configuração
-        </Button>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3">
@@ -351,28 +335,23 @@ export default function UsuariosPage() {
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{editingUser ? "Editar configuração" : "Nova configuração local"}</DialogTitle>
+            <DialogTitle>Configurações locais do usuário</DialogTitle>
             <DialogDescription>
-              O usuário deve existir e autenticar pelo RaroNexus. Estes campos ajustam apenas dados complementares do Sisgar.
+              Nome, e-mail e cargo são sincronizados do RaroNexus. Aqui você pode ajustar o e-mail de vínculo e preferências do Sisgar.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>Nome</Label>
-              <Input
-                value={formData.nome}
-                onChange={(event) => setFormData({ ...formData, nome: event.target.value })}
-                placeholder="Nome completo"
-              />
+              <div className="rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm font-medium text-foreground">
+                {formData.nome || "-"}
+              </div>
             </div>
             <div className="space-y-2">
               <Label>E-mail</Label>
-              <Input
-                type="email"
-                value={formData.email}
-                onChange={(event) => setFormData({ ...formData, email: event.target.value })}
-                placeholder="email@exemplo.com"
-              />
+              <div className="rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+                {formData.email || "-"}
+              </div>
             </div>
             <div className="space-y-2">
               <Label>E-mail do Nexus</Label>
