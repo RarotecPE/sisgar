@@ -18,9 +18,9 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from "@/components/ui/dialog"
 import {
   Select,
@@ -37,19 +37,18 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
-import { 
-  Plus, 
-  Pencil, 
-  Trash2, 
-  Key, 
-  Search, 
-  Users, 
-  UserCheck, 
-  UserX, 
-  MoreHorizontal,
+import {
   Loader2,
+  MoreHorizontal,
+  Pencil,
+  Plus,
+  Search,
   Shield,
-  ShieldAlert
+  ShieldAlert,
+  Trash2,
+  UserCheck,
+  Users,
+  UserX,
 } from "lucide-react"
 import { useSession } from "@/lib/auth-context"
 import { isGestor } from "@/lib/permissions"
@@ -64,8 +63,6 @@ interface Usuario {
   created_at: string
 }
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json())
-
 const CARGOS_USUARIO = [
   "Administrador",
   "Diretor",
@@ -73,75 +70,66 @@ const CARGOS_USUARIO = [
   "Coordenação",
   "Operador",
   "Estagiário",
+  "Funcionário",
+  "Técnico",
 ]
+
+const fetcher = async (url: string) => {
+  const response = await fetch(url, { cache: "no-store" })
+  const data = await response.json().catch(() => null)
+  if (!response.ok) throw new Error(data?.error || "Não foi possível carregar os usuários.")
+  return data
+}
 
 export default function UsuariosPage() {
   const { user } = useSession()
   const userIsGestor = user?.nome ? isGestor(user.nome, user.cargo) : false
-  const userIsAdmin = user?.cargo?.toLowerCase() === 'administrador'
-  
-  const { data: usuarios, mutate, isLoading } = useSWR<Usuario[]>("/api/usuarios", fetcher)
+  const userIsAdmin = user?.cargo?.toLowerCase() === "administrador"
+
+  const { data: usuarios, mutate, isLoading, error } = useSWR<Usuario[]>("/api/usuarios", fetcher, {
+    revalidateOnFocus: false,
+  })
   const [isFormOpen, setIsFormOpen] = useState(false)
-  const [isPasswordOpen, setIsPasswordOpen] = useState(false)
   const [editingUser, setEditingUser] = useState<Usuario | null>(null)
-  const [selectedUser, setSelectedUser] = useState<Usuario | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
   const [formData, setFormData] = useState({
     nome: "",
     email: "",
-    senha: "",
     cargo: "Operador",
     ativo: true,
     apuracao_mensal: false,
   })
-  const [novaSenha, setNovaSenha] = useState("")
   const [loading, setLoading] = useState(false)
-  
-  // Verificar acesso
+
   if (!userIsGestor) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] p-6">
-        <ShieldAlert className="h-16 w-16 text-amber-500 mb-4" />
-        <h1 className="text-2xl font-semibold text-foreground mb-2">Acesso Restrito</h1>
-        <p className="text-muted-foreground text-center max-w-md">
-          Apenas coordenadores, gerentes e diretores podem acessar o gerenciamento de usuarios.
+      <div className="flex min-h-[60vh] flex-col items-center justify-center p-6">
+        <ShieldAlert className="mb-4 h-16 w-16 text-amber-500" />
+        <h1 className="mb-2 text-2xl font-semibold text-foreground">Acesso restrito</h1>
+        <p className="max-w-md text-center text-muted-foreground">
+          Apenas gestores podem acessar a configuração local de usuários do Sisgar.
         </p>
       </div>
     )
   }
 
-  const filteredUsuarios = usuarios?.filter(
-    (u) =>
-      u.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      u.email.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  const filteredUsuarios = usuarios?.filter((usuario) => {
+    const term = searchTerm.toLowerCase()
+    return usuario.nome.toLowerCase().includes(term) || usuario.email.toLowerCase().includes(term)
+  }) ?? []
 
-  const totalAtivos = usuarios?.filter((u) => u.ativo).length || 0
-  const totalInativos = usuarios?.filter((u) => !u.ativo).length || 0
+  const totalAtivos = usuarios?.filter((usuario) => usuario.ativo).length || 0
+  const totalInativos = usuarios?.filter((usuario) => !usuario.ativo).length || 0
 
-  // Funções para proteção do admin
-  const isTargetAdmin = (usuario: Usuario) => usuario.cargo?.toLowerCase() === 'administrador'
-  const canEditUser = (usuario: Usuario) => {
-    // Só admin pode editar outro admin
-    if (isTargetAdmin(usuario) && !userIsAdmin) return false
-    return true
-  }
-  const canChangePassword = (usuario: Usuario) => {
-    // Só admin pode alterar senha de admin
-    if (isTargetAdmin(usuario) && !userIsAdmin) return false
-    return true
-  }
-  const canSetAdminRole = () => {
-    // Só admin pode definir alguém como admin
-    return userIsAdmin
-  }
+  const isTargetAdmin = (usuario: Usuario) => usuario.cargo?.toLowerCase() === "administrador"
+  const canEditUser = (usuario: Usuario) => !isTargetAdmin(usuario) || userIsAdmin
+  const canSetAdminRole = () => userIsAdmin
 
   const handleEdit = (usuario: Usuario) => {
     setEditingUser(usuario)
     setFormData({
       nome: usuario.nome,
       email: usuario.email,
-      senha: "",
       cargo: usuario.cargo || "Operador",
       ativo: usuario.ativo,
       apuracao_mensal: usuario.apuracao_mensal ?? false,
@@ -154,7 +142,6 @@ export default function UsuariosPage() {
     setFormData({
       nome: "",
       email: "",
-      senha: "",
       cargo: "Operador",
       ativo: true,
       apuracao_mensal: false,
@@ -163,103 +150,64 @@ export default function UsuariosPage() {
   }
 
   const handleSubmit = async () => {
-    // Validações de proteção do admin
-    if (formData.cargo === 'Administrador' && !userIsAdmin) {
-      alert('Apenas administradores podem definir o cargo de Administrador.')
+    if (formData.cargo === "Administrador" && !userIsAdmin) {
+      alert("Apenas administradores podem definir o cargo de Administrador.")
       return
     }
     if (editingUser && isTargetAdmin(editingUser) && !userIsAdmin) {
-      alert('Apenas administradores podem editar outros administradores.')
+      alert("Apenas administradores podem editar outros administradores.")
       return
     }
-    
+
     setLoading(true)
     try {
-      if (editingUser) {
-        await fetch(`/api/usuarios/${editingUser.id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(formData),
-        })
-      } else {
-        await fetch("/api/usuarios", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(formData),
-        })
-      }
-      mutate()
-      setIsFormOpen(false)
-    } catch (error) {
-      console.error("Erro ao salvar usuario:", error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleDelete = async (id: number, usuario: Usuario) => {
-    // Proteção do admin
-    if (isTargetAdmin(usuario) && !userIsAdmin) {
-      alert('Apenas administradores podem excluir outros administradores.')
-      return
-    }
-    if (!confirm("Deseja realmente excluir este usuario?")) return
-    try {
-      await fetch(`/api/usuarios/${id}`, { method: "DELETE" })
-      mutate()
-    } catch (error) {
-      console.error("Erro ao excluir usuario:", error)
-    }
-  }
-
-  const handleChangePassword = async () => {
-    if (!selectedUser || !novaSenha) return
-    
-    // Validação de proteção do admin
-    if (isTargetAdmin(selectedUser) && !userIsAdmin) {
-      alert('Apenas administradores podem alterar a senha de outros administradores.')
-      return
-    }
-    
-    setLoading(true)
-    try {
-      const res = await fetch("/api/usuarios/alterar-senha", {
-        method: "POST",
+      const response = await fetch(editingUser ? `/api/usuarios/${editingUser.id}` : "/api/usuarios", {
+        method: editingUser ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: selectedUser.id, novaSenha }),
+        body: JSON.stringify(formData),
       })
-      if (res.ok) {
-        setIsPasswordOpen(false)
-        setNovaSenha("")
-        alert("Senha alterada com sucesso!")
-      } else {
-        const data = await res.json()
-        alert(data.error || "Erro ao alterar senha")
-      }
-    } catch (error) {
-      console.error("Erro ao alterar senha:", error)
+      const data = await response.json().catch(() => null)
+      if (!response.ok) throw new Error(data?.error || "Erro ao salvar usuário.")
+      await mutate()
+      setIsFormOpen(false)
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Erro ao salvar usuário.")
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleDelete = async (usuario: Usuario) => {
+    if (!canEditUser(usuario)) {
+      alert("Apenas administradores podem excluir outros administradores.")
+      return
+    }
+    if (!confirm("Deseja realmente excluir esta configuração local de usuário? O login no RaroNexus não será removido.")) return
+    try {
+      const response = await fetch(`/api/usuarios/${usuario.id}`, { method: "DELETE" })
+      const data = await response.json().catch(() => null)
+      if (!response.ok) throw new Error(data?.error || "Erro ao excluir usuário.")
+      await mutate()
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Erro ao excluir usuário.")
     }
   }
 
   return (
-    <div className="p-6 lg:p-8 space-y-6">
-      {/* Header */}
+    <div className="space-y-6 p-6 lg:p-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-foreground">Usuarios</h1>
+          <h1 className="text-2xl font-semibold text-foreground">Usuários</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Gerencie os usuarios do sistema
+            Configure permissões complementares do Sisgar. Login e senha são geridos pelo RaroNexus.
           </p>
         </div>
         <Button onClick={handleNew} className="w-full sm:w-auto">
           <Plus className="mr-2 h-4 w-4" />
-          Novo Usuario
+          Nova configuração
         </Button>
       </div>
 
-      {/* Stats Cards */}
       <div className="grid gap-4 sm:grid-cols-3">
         <Card className="border shadow-sm">
           <CardContent className="flex items-center gap-4 p-4">
@@ -274,7 +222,7 @@ export default function UsuariosPage() {
         </Card>
         <Card className="border shadow-sm">
           <CardContent className="flex items-center gap-4 p-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-100">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-100 dark:bg-emerald-500/10">
               <UserCheck className="h-6 w-6 text-emerald-600" />
             </div>
             <div>
@@ -285,8 +233,8 @@ export default function UsuariosPage() {
         </Card>
         <Card className="border shadow-sm">
           <CardContent className="flex items-center gap-4 p-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gray-100">
-              <UserX className="h-6 w-6 text-gray-600" />
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-500/10">
+              <UserX className="h-6 w-6 text-slate-600 dark:text-slate-300" />
             </div>
             <div>
               <p className="text-2xl font-bold">{totalInativos}</p>
@@ -296,7 +244,6 @@ export default function UsuariosPage() {
         </Card>
       </div>
 
-      {/* Main Table Card */}
       <Card className="border shadow-sm">
         <CardHeader className="pb-4">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -305,18 +252,16 @@ export default function UsuariosPage() {
                 <Shield className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <CardTitle className="text-base font-medium">Lista de Usuarios</CardTitle>
-                <CardDescription>
-                  {usuarios?.length || 0} usuario(s) cadastrado(s)
-                </CardDescription>
+                <CardTitle className="text-base font-medium">Lista de usuários</CardTitle>
+                <CardDescription>{usuarios?.length || 0} configuração(ões) local(is)</CardDescription>
               </div>
             </div>
             <div className="relative w-full sm:w-80">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="Buscar por nome ou email..."
+                placeholder="Buscar por nome ou e-mail..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(event) => setSearchTerm(event.target.value)}
                 className="pl-9"
               />
             </div>
@@ -328,36 +273,37 @@ export default function UsuariosPage() {
               <TableHeader>
                 <TableRow className="bg-muted/50">
                   <TableHead className="font-medium">Nome</TableHead>
-                  <TableHead className="font-medium hidden md:table-cell">Email</TableHead>
+                  <TableHead className="hidden font-medium md:table-cell">E-mail</TableHead>
                   <TableHead className="font-medium">Cargo</TableHead>
                   <TableHead className="font-medium">Status</TableHead>
-                  <TableHead className="font-medium w-[70px]"></TableHead>
+                  <TableHead className="w-[70px] font-medium" />
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading ? (
                   <TableRow>
                     <TableCell colSpan={5} className="h-32 text-center">
-                      <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
+                      <Loader2 className="mx-auto h-6 w-6 animate-spin text-muted-foreground" />
                     </TableCell>
                   </TableRow>
-                ) : filteredUsuarios?.length === 0 ? (
+                ) : error ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="h-32 text-center">
-                      <div className="flex flex-col items-center gap-2">
-                        <Users className="h-8 w-8 text-muted-foreground/30" />
-                        <p className="text-sm text-muted-foreground">
-                          {searchTerm ? "Nenhum usuario encontrado" : "Nenhum usuario cadastrado"}
-                        </p>
-                      </div>
+                    <TableCell colSpan={5} className="h-32 text-center text-destructive">
+                      {error.message}
+                    </TableCell>
+                  </TableRow>
+                ) : filteredUsuarios.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="h-32 text-center text-muted-foreground">
+                      {searchTerm ? "Nenhum usuário encontrado" : "Nenhum usuário cadastrado"}
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredUsuarios?.map((usuario) => (
-                    <TableRow key={usuario.id} className="group">
+                  filteredUsuarios.map((usuario) => (
+                    <TableRow key={usuario.id}>
                       <TableCell>
                         <div className="flex items-center gap-3">
-                          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary text-sm font-medium">
+                          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-sm font-medium text-primary">
                             {usuario.nome.charAt(0).toUpperCase()}
                           </div>
                           <div className="flex flex-col">
@@ -366,22 +312,16 @@ export default function UsuariosPage() {
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell className="text-muted-foreground hidden md:table-cell">
-                        {usuario.email}
+                      <TableCell className="hidden text-muted-foreground md:table-cell">{usuario.email}</TableCell>
+                      <TableCell>
+                        <Badge variant="secondary" className="font-normal">{usuario.cargo || "-"}</Badge>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="secondary" className="font-normal">
-                          {usuario.cargo || "-"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge 
+                        <Badge
                           variant="secondary"
-                          className={
-                            usuario.ativo 
-                              ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-100" 
-                              : "bg-gray-100 text-gray-600 hover:bg-gray-100"
-                          }
+                          className={usuario.ativo
+                            ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-300"
+                            : "bg-slate-100 text-slate-600 hover:bg-slate-100 dark:bg-slate-500/10 dark:text-slate-300"}
                         >
                           {usuario.ativo ? "Ativo" : "Inativo"}
                         </Badge>
@@ -394,33 +334,17 @@ export default function UsuariosPage() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem 
-                              onClick={() => handleEdit(usuario)}
-                              disabled={!canEditUser(usuario)}
-                            >
+                            <DropdownMenuItem onClick={() => handleEdit(usuario)} disabled={!canEditUser(usuario)}>
                               <Pencil className="mr-2 h-4 w-4" />
                               Editar
-                              {!canEditUser(usuario) && <Shield className="ml-2 h-3 w-3 text-muted-foreground" />}
                             </DropdownMenuItem>
-                            <DropdownMenuItem 
-                              onClick={() => {
-                                setSelectedUser(usuario)
-                                setIsPasswordOpen(true)
-                              }}
-                              disabled={!canChangePassword(usuario)}
-                            >
-                              <Key className="mr-2 h-4 w-4" />
-                              Alterar Senha
-                              {!canChangePassword(usuario) && <Shield className="ml-2 h-3 w-3 text-muted-foreground" />}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem 
-                              onClick={() => handleDelete(usuario.id, usuario)}
+                            <DropdownMenuItem
+                              onClick={() => handleDelete(usuario)}
                               className="text-destructive focus:text-destructive"
                               disabled={!canEditUser(usuario)}
                             >
                               <Trash2 className="mr-2 h-4 w-4" />
-                              Excluir
-                              {!canEditUser(usuario) && <Shield className="ml-2 h-3 w-3 text-muted-foreground" />}
+                              Excluir configuração
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -434,17 +358,12 @@ export default function UsuariosPage() {
         </CardContent>
       </Card>
 
-      {/* Form Dialog */}
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>
-              {editingUser ? "Editar Usuario" : "Novo Usuario"}
-            </DialogTitle>
+            <DialogTitle>{editingUser ? "Editar configuração" : "Nova configuração local"}</DialogTitle>
             <DialogDescription>
-              {editingUser
-                ? "Atualize os dados do usuario"
-                : "Preencha os dados para criar um novo usuario"}
+              O usuário deve existir e autenticar pelo RaroNexus. Estes campos ajustam apenas permissões do Sisgar.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -452,117 +371,52 @@ export default function UsuariosPage() {
               <Label>Nome</Label>
               <Input
                 value={formData.nome}
-                onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
+                onChange={(event) => setFormData({ ...formData, nome: event.target.value })}
                 placeholder="Nome completo"
               />
             </div>
             <div className="space-y-2">
-              <Label>Email</Label>
+              <Label>E-mail</Label>
               <Input
                 type="email"
                 value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                onChange={(event) => setFormData({ ...formData, email: event.target.value })}
                 placeholder="email@exemplo.com"
               />
             </div>
-            {!editingUser && (
-              <div className="space-y-2">
-                <Label>Senha</Label>
-                <Input
-                  type="password"
-                  value={formData.senha}
-                  onChange={(e) => setFormData({ ...formData, senha: e.target.value })}
-                  placeholder="Senha inicial"
-                />
-              </div>
-            )}
             <div className="space-y-2">
               <Label>Cargo</Label>
-              <Select
-                value={formData.cargo}
-                onValueChange={(value) => setFormData({ ...formData, cargo: value })}
-              >
+              <Select value={formData.cargo} onValueChange={(value) => setFormData({ ...formData, cargo: value })}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {CARGOS_USUARIO
-                    .filter(cargo => cargo !== 'Administrador' || userIsAdmin)
-                    .map((cargo) => (
-                    <SelectItem key={cargo} value={cargo}>
-                      {cargo}
-                      {cargo === 'Administrador' && <span className="ml-2 text-muted-foreground">(Restrito)</span>}
-                    </SelectItem>
+                  {CARGOS_USUARIO.filter((cargo) => cargo !== "Administrador" || canSetAdminRole()).map((cargo) => (
+                    <SelectItem key={cargo} value={cargo}>{cargo}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-            <div
-              className={`flex items-center justify-between gap-3 rounded-lg border p-3 ${
-                formData.apuracao_mensal ? "border-emerald-500/50 bg-emerald-50" : "border-border"
-              }`}
-            >
+            <div className="flex items-center justify-between gap-3 rounded-lg border border-border p-3">
               <div className="leading-tight">
-                <p className="text-sm font-medium text-foreground">Habilitar Apuracao Mensal</p>
-                <p className="text-xs text-muted-foreground">
-                  Libera o acesso aos menus de Apuracao Mensal e Modelos de Apuracao.
-                </p>
+                <p className="text-sm font-medium text-foreground">Apuração mensal</p>
+                <p className="text-xs text-muted-foreground">Libera menus de apuração mensal e modelos de apuração.</p>
               </div>
               <Switch
                 checked={formData.apuracao_mensal}
-                onCheckedChange={(checked) =>
-                  setFormData({ ...formData, apuracao_mensal: checked })
-                }
-                aria-label="Habilitar apuracao mensal"
+                onCheckedChange={(checked) => setFormData({ ...formData, apuracao_mensal: checked })}
+                aria-label="Habilitar apuração mensal"
               />
             </div>
-            {editingUser && (
-              <div className="flex items-center justify-between">
-                <Label>Usuario Ativo</Label>
-                <Switch
-                  checked={formData.ativo}
-                  onCheckedChange={(checked) => setFormData({ ...formData, ativo: checked })}
-                />
-              </div>
-            )}
+            <div className="flex items-center justify-between rounded-lg border border-border p-3">
+              <Label>Configuração ativa</Label>
+              <Switch checked={formData.ativo} onCheckedChange={(checked) => setFormData({ ...formData, ativo: checked })} />
+            </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsFormOpen(false)}>
-              Cancelar
-            </Button>
+            <Button variant="outline" onClick={() => setIsFormOpen(false)}>Cancelar</Button>
             <Button onClick={handleSubmit} disabled={loading}>
               {loading ? "Salvando..." : "Salvar"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Password Dialog */}
-      <Dialog open={isPasswordOpen} onOpenChange={setIsPasswordOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Alterar Senha</DialogTitle>
-            <DialogDescription>
-              Defina uma nova senha para {selectedUser?.nome}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Nova Senha</Label>
-              <Input
-                type="password"
-                value={novaSenha}
-                onChange={(e) => setNovaSenha(e.target.value)}
-                placeholder="Digite a nova senha"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsPasswordOpen(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleChangePassword} disabled={loading || !novaSenha}>
-              {loading ? "Alterando..." : "Alterar Senha"}
             </Button>
           </DialogFooter>
         </DialogContent>

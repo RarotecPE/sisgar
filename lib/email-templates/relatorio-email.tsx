@@ -22,6 +22,7 @@ interface RelatorioEmailProps {
   numeroAutenticacao: string
   resumoServico?: string
   validacaoUrl: string
+  logoUrl?: string
 }
 
 export function RelatorioEmail({
@@ -33,6 +34,7 @@ export function RelatorioEmail({
   numeroAutenticacao,
   resumoServico,
   validacaoUrl,
+  logoUrl,
 }: RelatorioEmailProps) {
   return (
     <Html>
@@ -44,6 +46,7 @@ export function RelatorioEmail({
         <Container style={container}>
           {/* Header */}
           <Section style={header}>
+            {logoUrl ? <Img src={logoUrl} alt="SISGAR" width="72" height="72" style={logoImage} /> : null}
             <Heading style={logoText}>SISGAR</Heading>
             <Text style={logoSubtext}>Sistema de Gestão e Acompanhamento Rarotec</Text>
           </Section>
@@ -155,6 +158,12 @@ const header = {
   backgroundColor: "#0f172a",
   padding: "24px 32px",
   textAlign: "center" as const,
+}
+
+const logoImage = {
+  display: "block",
+  margin: "0 auto 12px auto",
+  borderRadius: "16px",
 }
 
 const logoText = {

@@ -1,9 +1,10 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
+import { useTheme } from "@/components/theme-provider"
 import Link from "next/link"
-import { Search, FileText, ShieldCheck, ArrowLeft } from "lucide-react"
+import { Moon, Search, ShieldCheck, Sun } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -11,7 +12,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 export default function ValidarPage() {
   const [codigo, setCodigo] = useState("")
   const [loading, setLoading] = useState(false)
+  const [themeMounted, setThemeMounted] = useState(false)
   const router = useRouter()
+  const { resolvedTheme, setTheme } = useTheme()
+  const isDark = themeMounted ? resolvedTheme !== "light" : true
+  const themeLabel = themeMounted ? (isDark ? "Ativar modo claro" : "Ativar modo escuro") : "Alternar tema"
+
+  useEffect(() => {
+    setThemeMounted(true)
+  }, [])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -27,17 +36,32 @@ export default function ValidarPage() {
       <header className="border-b bg-background/95 backdrop-blur">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
-            <img
-              src="https://www.rarotec.com.br/assets/logo.png"
-              alt="Rarotec"
-              className="h-8 w-auto"
-            />
+            <span className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-2xl bg-white p-0.5 shadow-sm ring-1 ring-border">
+              <img
+                src="/logo.png"
+                alt="SISGAR"
+                className="h-full w-full object-contain"
+              />
+            </span>
+            <span className="font-semibold text-foreground">SISGAR</span>
           </Link>
-          <Link href="/login">
-            <Button variant="outline" size="sm">
-              Area Restrita
+          <div className="flex items-center gap-2">
+            <Link href="/login">
+              <Button variant="outline" size="sm">
+                Área Restrita
+              </Button>
+            </Link>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              aria-label={themeLabel}
+              title={themeLabel}
+              onClick={() => setTheme(isDark ? "light" : "dark")}
+            >
+              {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
             </Button>
-          </Link>
+          </div>
         </div>
       </header>
 

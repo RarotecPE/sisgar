@@ -1,14 +1,83 @@
 import { cookies } from "next/headers"
+import { NextRequest, NextResponse } from "next/server"
 import bcrypt from "bcryptjs"
 import { sql } from "./db"
 
+export const AUTH_COOKIE_NAME = "sisgar_global_session"
+export const SSO_STATE_COOKIE_NAME = "sisgar_sso_state"
+export const SSO_NEXT_COOKIE_NAME = "sisgar_sso_next"
+const LEGACY_SESSION_COOKIE_NAME = "session_id"
+const LEGACY_USER_COOKIE_NAME = "user_id"
+const PERSISTENT_SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 365 * 10
+
 export interface User {
   id: number
+  nexus_user_id?: string | null
   nome: string
   email: string
+  avatar_url?: string | null
   cargo: string | null
   ativo: boolean
   apuracao_mensal: boolean
+}
+
+type NexusUser = {
+  id: string
+  nome: string
+  email: string
+  avatar_url?: string | null
+}
+
+type NexusRole = {
+  id?: string
+  nome: string
+  chave: string
+}
+
+type NexusSession = {
+  user: NexusUser
+  role: NexusRole
+}
+
+type NexusIntrospectionResponse = {
+  success: boolean
+  message?: string
+  data?: {
+    active: boolean
+    user: NexusUser
+    role: NexusRole
+  }
+}
+
+const ROLE_TO_CARGO: Record<string, string> = {
+  administrador: "Administrador",
+  admin: "Administrador",
+  diretor: "Diretor",
+  gerente: "Gerente",
+  gestor: "Gerente",
+  coordenacao: "Coordenação",
+  coordenador: "Coordenação",
+  operador: "Operador",
+  estagiario: "Estagiário",
+  funcionario: "Funcionário",
+  visualizador: "Funcionário",
+  tecnico: "Técnico",
+}
+
+function getEnv(name: string, fallback?: string) {
+  const value = process.env[name] || fallback
+  if (!value) throw new Error(`${name} is required`)
+  return value
+}
+
+function mapRoleToCargo(role: NexusRole) {
+  const normalized = role.chave.trim().toLowerCase()
+  if (normalized === "nao_autorizado") return null
+  return ROLE_TO_CARGO[normalized] ?? role.nome ?? null
+}
+
+function normalizeEmail(email: string) {
+  return email.trim().toLowerCase()
 }
 
 export async function hashPassword(password: string): Promise<string> {
@@ -22,51 +91,142 @@ export async function verifyPassword(
   return bcrypt.compare(password, hashedPassword)
 }
 
-export async function createSession(userId: number): Promise<string> {
-  const sessionId = crypto.randomUUID()
+export async function createSession(): Promise<string> {
+  throw new Error("A autenticação local foi substituída pelo RaroNexus.")
+}
+
+export function setSessionCookie(response: NextResponse, token: string) {
+  response.cookies.set(AUTH_COOKIE_NAME, token, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: PERSISTENT_SESSION_MAX_AGE_SECONDS,
+  })
+  response.cookies.delete(LEGACY_SESSION_COOKIE_NAME)
+  response.cookies.delete(LEGACY_USER_COOKIE_NAME)
+}
+
+export function clearSessionCookies(response: NextResponse) {
+  response.cookies.delete(AUTH_COOKIE_NAME)
+  response.cookies.delete(LEGACY_SESSION_COOKIE_NAME)
+  response.cookies.delete(LEGACY_USER_COOKIE_NAME)
+}
+
+export function getGlobalSessionToken(request: NextRequest) {
+  return request.cookies.get(AUTH_COOKIE_NAME)?.value ?? null
+}
+
+async function getGlobalSessionTokenFromCookies() {
   const cookieStore = await cookies()
-  
-  cookieStore.set("session_id", sessionId, {
-    httpOnly: true,
-    secure: true,
-    sameSite: "none",
-    maxAge: 60 * 60 * 24 * 7, // 7 days
-    path: "/",
-  })
-  
-  cookieStore.set("user_id", String(userId), {
-    httpOnly: true,
-    secure: true,
-    sameSite: "none",
-    maxAge: 60 * 60 * 24 * 7,
-    path: "/",
-  })
-  
-  return sessionId
+  return cookieStore.get(AUTH_COOKIE_NAME)?.value ?? null
+}
+
+async function introspectGlobalSession(token: string): Promise<NexusSession | null> {
+  let response: Response
+  let payload: NexusIntrospectionResponse | null
+
+  try {
+    const nexusBaseUrl = getEnv("RARONEXUS_BASE_URL", "http://localhost:3001")
+    const clientId = getEnv("RARONEXUS_CLIENT_ID", "sisgar")
+    response = await fetch(new URL("/api/v1/sessions/introspect", nexusBaseUrl), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token, client_id: clientId }),
+      cache: "no-store",
+    })
+    payload = (await response.json().catch(() => null)) as NexusIntrospectionResponse | null
+  } catch (error) {
+    console.error("raronexus_session_introspection_failed", error)
+    return null
+  }
+
+  if (!response.ok || !payload?.success || !payload.data?.active) return null
+  if (!mapRoleToCargo(payload.data.role)) return null
+
+  return {
+    user: payload.data.user,
+    role: payload.data.role,
+  }
+}
+
+async function syncLocalUser(session: NexusSession): Promise<User | null> {
+  const cargo = mapRoleToCargo(session.role)
+  if (!cargo) return null
+
+  const email = normalizeEmail(session.user.email)
+  const nome = session.user.nome || email
+  const existing = await sql`
+    SELECT id, nome, email, cargo, ativo, apuracao_mensal
+    FROM usuarios
+    WHERE LOWER(email) = ${email}
+    LIMIT 1
+  `
+
+  if (existing.length > 0) {
+    const [updated] = await sql`
+      UPDATE usuarios
+      SET nome = ${nome}, email = ${email}, cargo = COALESCE(usuarios.cargo, ${cargo}), updated_at = CURRENT_TIMESTAMP
+      WHERE id = ${existing[0].id}
+      RETURNING id, nome, email, cargo, ativo, apuracao_mensal
+    `
+    if (!updated.ativo) return null
+    return {
+      ...updated,
+      nexus_user_id: session.user.id,
+      avatar_url: session.user.avatar_url ?? null,
+    } as User
+  }
+
+  const senhaHash = `raronexus:${crypto.randomUUID()}`
+  const [created] = await sql`
+    INSERT INTO usuarios (nome, email, senha_hash, cargo, ativo, apuracao_mensal)
+    VALUES (${nome}, ${email}, ${senhaHash}, ${cargo}, true, false)
+    RETURNING id, nome, email, cargo, ativo, apuracao_mensal
+  `
+
+  return {
+    ...created,
+    nexus_user_id: session.user.id,
+    avatar_url: session.user.avatar_url ?? null,
+  } as User
+}
+
+export async function getSessionFromToken(token: string | null): Promise<User | null> {
+  if (!token) return null
+  const session = await introspectGlobalSession(token)
+  if (!session) return null
+  return syncLocalUser(session)
 }
 
 export async function getSession(): Promise<User | null> {
-  const cookieStore = await cookies()
-  const userId = cookieStore.get("user_id")?.value
-  
-  if (!userId) return null
-  
-  const users = await sql`
-    SELECT id, nome, email, cargo, ativo, apuracao_mensal 
-    FROM usuarios 
-    WHERE id = ${parseInt(userId)} AND ativo = true
-  `
-  
-  return users[0] as User | null
+  const token = await getGlobalSessionTokenFromCookies()
+  return getSessionFromToken(token)
+}
+
+export async function getSessionFromRequest(request: NextRequest): Promise<User | null> {
+  return getSessionFromToken(getGlobalSessionToken(request))
+}
+
+export async function revokeGlobalSession(token: string) {
+  const nexusBaseUrl = getEnv("RARONEXUS_BASE_URL", "http://localhost:3001")
+  await fetch(new URL("/api/v1/sessions/revoke", nexusBaseUrl), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token }),
+    cache: "no-store",
+  }).catch(() => null)
 }
 
 export async function destroySession(): Promise<void> {
   const cookieStore = await cookies()
-  cookieStore.delete("session_id")
-  cookieStore.delete("user_id")
+  const token = cookieStore.get(AUTH_COOKIE_NAME)?.value
+  if (token) await revokeGlobalSession(token)
+  cookieStore.delete(AUTH_COOKIE_NAME)
+  cookieStore.delete(LEGACY_SESSION_COOKIE_NAME)
+  cookieStore.delete(LEGACY_USER_COOKIE_NAME)
 }
 
-// Resolve o tecnico_rarotec_id vinculado a um usuario (por email, fallback por nome).
 export async function resolveTecnicoRarotecId(user: User): Promise<number | null> {
   try {
     let tecnicos = await sql`
@@ -83,8 +243,6 @@ export async function resolveTecnicoRarotecId(user: User): Promise<number | null
   }
 }
 
-// Resolve a lista de setores (array de texto) a que o usuario pertence,
-// a partir do tecnico_rarotec vinculado (por email, fallback por nome).
 export async function resolveSetoresUsuario(user: User): Promise<string[]> {
   try {
     let rows = await sql`

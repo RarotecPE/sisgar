@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -9,8 +9,7 @@ import { Separator } from "@/components/ui/separator"
 import { Checkbox } from "@/components/ui/checkbox"
 import { 
   Settings, 
-  Lock, 
-  Save, 
+  Lock,
   Info, 
   Building2, 
   Trash2, 
@@ -18,7 +17,8 @@ import {
   ShieldAlert,
   Loader2,
   Users,
-  Database
+  Database,
+  ExternalLink,
 } from "lucide-react"
 import {
   Dialog,
@@ -39,23 +39,26 @@ import { isGestor } from "@/lib/permissions"
 import { OuveConfigToggle } from "@/components/ouve-config-toggle"
 
 const TABELAS_DISPONIVEIS = [
-  { id: "relatorios", label: "Relatorios de Visita", description: "Todos os relatorios e anexos" },
+  { id: "relatorios", label: "Relatórios de Visita", description: "Todos os relatórios e anexos" },
   { id: "agenda", label: "Agenda", description: "Todos os agendamentos" },
-  { id: "pesquisas", label: "Pesquisas", description: "Todas as pesquisas de satisfacao" },
-  { id: "tecnicos_clientes", label: "Tecnicos dos Clientes", description: "Contatos dos clientes" },
-  { id: "tecnicos_rarotec", label: "Tecnicos Rarotec", description: "Equipe (exceto voce)" },
+  { id: "pesquisas", label: "Pesquisas", description: "Todas as pesquisas de satisfação" },
+  { id: "tecnicos_clientes", label: "Técnicos dos Clientes", description: "Contatos dos clientes" },
+  { id: "tecnicos_rarotec", label: "Técnicos Rarotec", description: "Equipe (exceto você)" },
   { id: "clientes", label: "Clientes", description: "Todos os clientes cadastrados" },
-  { id: "usuarios", label: "Usuarios do Sistema", description: "Usuarios (exceto voce)" },
+  { id: "usuarios", label: "Usuários do Sistema", description: "Usuários (exceto você)" },
 ]
 
 export default function ConfiguracoesPage() {
   const { user, isAdmin } = useSession()
   const userIsGestor = user?.nome ? isGestor(user.nome, user.cargo) : false
-  const [senhaAtual, setSenhaAtual] = useState("")
-  const [novaSenha, setNovaSenha] = useState("")
-  const [confirmarSenha, setConfirmarSenha] = useState("")
-  const [loading, setLoading] = useState(false)
-  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
+  const [nexusProfileUrl, setNexusProfileUrl] = useState<string | null>(null)
+
+  useEffect(() => {
+    fetch("/api/auth/applications", { cache: "no-store" })
+      .then((response) => response.json())
+      .then((data) => setNexusProfileUrl(data.nexusProfileUrl || null))
+      .catch(() => setNexusProfileUrl(null))
+  }, [])
 
   // Estados para limpeza de dados
   const [limparDialogOpen, setLimparDialogOpen] = useState(false)
@@ -68,7 +71,7 @@ export default function ConfiguracoesPage() {
     resultados?: { tabela: string; deletados: number }[] 
   } | null>(null)
 
-  // Estados para seed de usuarios
+  // Estados para seed de usuários
   const [seedLoading, setSeedLoading] = useState(false)
   const [seedResultado, setSeedResultado] = useState<{
     success: boolean;
@@ -78,44 +81,6 @@ export default function ConfiguracoesPage() {
       tecnicos: { criados: number; existentes: number; erros: number };
     }
   } | null>(null)
-
-  const handleChangePassword = async () => {
-    if (novaSenha !== confirmarSenha) {
-      setMessage({ type: "error", text: "As senhas nao conferem" })
-      return
-    }
-
-    if (novaSenha.length < 6) {
-      setMessage({ type: "error", text: "A senha deve ter no minimo 6 caracteres" })
-      return
-    }
-
-    setLoading(true)
-    setMessage(null)
-
-    try {
-      const res = await fetch("/api/usuarios/alterar-senha", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ senhaAtual, novaSenha }),
-      })
-
-      const data = await res.json()
-
-      if (res.ok) {
-        setMessage({ type: "success", text: "Senha alterada com sucesso!" })
-        setSenhaAtual("")
-        setNovaSenha("")
-        setConfirmarSenha("")
-      } else {
-        setMessage({ type: "error", text: data.error || "Erro ao alterar senha" })
-      }
-    } catch (error) {
-      setMessage({ type: "error", text: "Erro ao conectar com o servidor" })
-    } finally {
-      setLoading(false)
-    }
-  }
 
   const handleToggleTabela = (tabelaId: string) => {
     setTabelasSelecionadas(prev => 
@@ -178,7 +143,7 @@ export default function ConfiguracoesPage() {
     setLimparDialogOpen(false)
   }
 
-  const handleSeedUsuarios = async () => {
+  const handleSeedUsuários = async () => {
     setSeedLoading(true)
     setSeedResultado(null)
 
@@ -197,7 +162,7 @@ export default function ConfiguracoesPage() {
           resultados: data.resultados 
         })
       } else {
-        setSeedResultado({ success: false, message: data.error || "Erro ao criar usuarios" })
+        setSeedResultado({ success: false, message: data.error || "Erro ao criar usuários" })
       }
     } catch (error) {
       setSeedResultado({ success: false, message: "Erro ao conectar com o servidor" })
@@ -211,9 +176,9 @@ export default function ConfiguracoesPage() {
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-foreground">Configuracoes</h1>
+          <h1 className="text-2xl font-semibold text-foreground">Configurações</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Gerencie suas preferencias e seguranca
+            Gerencie suas preferências e segurança
           </p>
         </div>
       </div>
@@ -237,7 +202,7 @@ export default function ConfiguracoesPage() {
               <Lock className="h-6 w-6 text-emerald-600" />
             </div>
             <div>
-              <p className="text-sm font-medium">Seguranca</p>
+              <p className="text-sm font-medium">Segurança</p>
               <p className="text-xs text-muted-foreground">Senha protegida</p>
             </div>
           </CardContent>
@@ -260,7 +225,6 @@ export default function ConfiguracoesPage() {
 
       {/* Cards Grid */}
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Alterar Senha */}
         <Card className="border shadow-sm">
           <CardHeader className="pb-4">
             <div className="flex items-center gap-3">
@@ -268,65 +232,22 @@ export default function ConfiguracoesPage() {
                 <Lock className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <CardTitle className="text-base font-medium">Alterar Senha</CardTitle>
+                <CardTitle className="text-base font-medium">Conta RaroNexus</CardTitle>
                 <CardDescription>
-                  Atualize sua senha de acesso ao sistema
+                  Login, senha e dados de perfil são gerenciados pela central RaroNexus.
                 </CardDescription>
               </div>
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label>Senha Atual</Label>
-              <Input
-                type="password"
-                value={senhaAtual}
-                onChange={(e) => setSenhaAtual(e.target.value)}
-                placeholder="Digite sua senha atual"
-              />
-            </div>
-
-            <Separator />
-
-            <div className="space-y-2">
-              <Label>Nova Senha</Label>
-              <Input
-                type="password"
-                value={novaSenha}
-                onChange={(e) => setNovaSenha(e.target.value)}
-                placeholder="Digite a nova senha"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Confirmar Nova Senha</Label>
-              <Input
-                type="password"
-                value={confirmarSenha}
-                onChange={(e) => setConfirmarSenha(e.target.value)}
-                placeholder="Confirme a nova senha"
-              />
-            </div>
-
-            {message && (
-              <div
-                className={`rounded-lg p-3 text-sm ${
-                  message.type === "success"
-                    ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                    : "bg-red-50 text-red-700 border border-red-200"
-                }`}
-              >
-                {message.text}
-              </div>
-            )}
-
-            <Button
-              onClick={handleChangePassword}
-              disabled={loading || !senhaAtual || !novaSenha || !confirmarSenha}
-              className="w-full"
-            >
-              <Save className="mr-2 h-4 w-4" />
-              {loading ? "Alterando..." : "Alterar Senha"}
+            <p className="text-sm text-muted-foreground">
+              Use o botão abaixo para abrir seu perfil no RaroNexus e editar seus dados de conta.
+            </p>
+            <Button asChild variant="outline" className="w-full justify-center gap-2 sm:w-auto">
+              <a href={nexusProfileUrl || "#"} target="_blank" rel="noreferrer" aria-disabled={!nexusProfileUrl}>
+                <ExternalLink className="h-4 w-4" />
+                Editar perfil RaroNexus
+              </a>
             </Button>
           </CardContent>
         </Card>
@@ -342,7 +263,7 @@ export default function ConfiguracoesPage() {
                 <div>
                   <CardTitle className="text-base font-medium text-red-700">Zona de Perigo</CardTitle>
                   <CardDescription className="text-red-600/80">
-                    Acoes irreversiveis - Apenas para administradores
+                    Ações irreversiveis - Apenas para administradores
                   </CardDescription>
                 </div>
               </div>
@@ -350,9 +271,9 @@ export default function ConfiguracoesPage() {
             <CardContent className="space-y-4">
               <Alert variant="destructive" className="bg-red-50 border-red-200">
                 <AlertTriangle className="h-4 w-4" />
-                <AlertTitle>Atencao!</AlertTitle>
+                <AlertTitle>Atenção!</AlertTitle>
                 <AlertDescription>
-                  As acoes nesta secao sao permanentes e nao podem ser desfeitas. 
+                  As ações nesta seção são permanentes e não podem ser desfeitas. 
                   Use com extrema cautela.
                 </AlertDescription>
               </Alert>
@@ -373,7 +294,7 @@ export default function ConfiguracoesPage() {
                   </DialogTitle>
                   <DialogDescription>
                     Selecione quais dados deseja apagar permanentemente.
-                    Esta acao nao pode ser desfeita!
+                    Esta acao não pode ser desfeita!
                   </DialogDescription>
                 </DialogHeader>
 
@@ -497,22 +418,22 @@ export default function ConfiguracoesPage() {
               </DialogContent>
             </Dialog>
 
-            {/* Botao Seed de Usuarios */}
+            {/* Botao Seed de Usuários */}
             <Dialog>
               <DialogTrigger asChild>
                 <Button variant="outline" className="w-full sm:w-auto border-primary text-primary hover:bg-primary/10">
                   <Users className="mr-2 h-4 w-4" />
-                  Popular Usuarios Rarotec
+                  Popular Usuários Rarotec
                 </Button>
               </DialogTrigger>
               <DialogContent className="max-w-lg">
                 <DialogHeader>
                   <DialogTitle className="flex items-center gap-2">
                     <Database className="h-5 w-5 text-primary" />
-                    Popular Usuarios do Sistema
+                    Popular Usuários do Sistema
                   </DialogTitle>
                   <DialogDescription>
-                    Criar usuarios e tecnicos Rarotec no sistema com as credenciais padrao.
+                    Criar usuários e técnicos Rarotec no sistema com as credenciais padrao.
                   </DialogDescription>
                 </DialogHeader>
 
@@ -530,7 +451,7 @@ export default function ConfiguracoesPage() {
                     {seedResultado.resultados && (
                       <div className="p-4 rounded-lg bg-muted/50 space-y-3">
                         <div>
-                          <p className="text-sm font-medium mb-2">Usuarios:</p>
+                          <p className="text-sm font-medium mb-2">Usuários:</p>
                           <div className="grid grid-cols-3 gap-2 text-sm">
                             <div className="text-center p-2 rounded bg-green-100 text-green-700">
                               <p className="font-bold">{seedResultado.resultados.usuarios.criados}</p>
@@ -547,7 +468,7 @@ export default function ConfiguracoesPage() {
                           </div>
                         </div>
                         <div>
-                          <p className="text-sm font-medium mb-2">Tecnicos Rarotec:</p>
+                          <p className="text-sm font-medium mb-2">Técnicos Rarotec:</p>
                           <div className="grid grid-cols-3 gap-2 text-sm">
                             <div className="text-center p-2 rounded bg-green-100 text-green-700">
                               <p className="font-bold">{seedResultado.resultados.tecnicos.criados}</p>
@@ -578,8 +499,8 @@ export default function ConfiguracoesPage() {
                       <Info className="h-4 w-4 text-blue-600" />
                       <AlertTitle className="text-blue-700">Informacao</AlertTitle>
                       <AlertDescription className="text-blue-600">
-                        Serao criados 25 usuarios e tecnicos da equipe Rarotec.
-                        Usuarios ja existentes serao ignorados.
+                        Serao criados 25 usuários e técnicos da equipe Rarotec.
+                        Usuários ja existentes serao ignorados.
                       </AlertDescription>
                     </Alert>
 
@@ -590,26 +511,26 @@ export default function ConfiguracoesPage() {
                         <code className="bg-background px-2 py-0.5 rounded">88749860</code>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Demais usuarios:</span>
+                        <span className="text-muted-foreground">Demais usuários:</span>
                         <code className="bg-background px-2 py-0.5 rounded">123456</code>
                       </div>
                     </div>
 
                     <DialogFooter className="gap-2">
                       <Button
-                        onClick={handleSeedUsuarios}
+                        onClick={handleSeedUsuários}
                         disabled={seedLoading}
                         className="w-full sm:w-auto"
                       >
                         {seedLoading ? (
                           <>
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Criando usuarios...
+                            Criando usuários...
                           </>
                         ) : (
                           <>
                             <Users className="mr-2 h-4 w-4" />
-                            Criar Usuarios
+                            Criar Usuários
                           </>
                         )}
                       </Button>
