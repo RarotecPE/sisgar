@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import React, { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useTheme } from "@/components/theme-provider"
 import {
@@ -54,34 +54,28 @@ const getInitials = (name: string) =>
     .map((part) => part[0]?.toUpperCase())
     .join("") || "S"
 
-function HeaderIconButton({
-  children,
-  className,
-  onClick,
-  title,
-}: {
-  children: React.ReactNode
-  className?: string
-  onClick?: () => void
+type HeaderIconButtonProps = React.ComponentPropsWithoutRef<"button"> & {
   title: string
-}) {
-  return (
-    <Button
-      type="button"
-      variant="ghost"
-      size="icon"
+}
+
+const HeaderIconButton = React.forwardRef<HTMLButtonElement, HeaderIconButtonProps>(
+  ({ children, className, title, type = "button", ...props }, ref) => (
+    <button
+      ref={ref}
+      type={type}
       className={cn(
-        "h-10 w-10 rounded-lg border border-border/80 bg-card/80 text-muted-foreground shadow-sm transition-colors hover:border-primary/40 hover:bg-secondary hover:text-foreground dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-200 dark:hover:border-cyan-400/45 dark:hover:bg-slate-800 dark:hover:text-white",
+        "inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-border/80 bg-card/80 text-muted-foreground shadow-sm outline-none transition-colors hover:border-primary/40 hover:bg-secondary hover:text-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-200 dark:hover:border-cyan-400/45 dark:hover:bg-slate-800 dark:hover:text-white [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
         className,
       )}
       aria-label={title}
       title={title}
-      onClick={onClick}
+      {...props}
     >
       {children}
-    </Button>
-  )
-}
+    </button>
+  ),
+)
+HeaderIconButton.displayName = "HeaderIconButton"
 
 function ApplicationsMenu() {
   const [payload, setPayload] = useState<ApplicationsPayload | null>(null)
@@ -114,9 +108,6 @@ function ApplicationsMenu() {
         <DropdownMenuLabel>
           <div className="space-y-1">
             <p className="text-sm font-semibold">Aplicativos</p>
-            <p className="text-xs font-normal text-muted-foreground">
-              Sistemas integrados à sua conta
-            </p>
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
@@ -152,7 +143,6 @@ function ApplicationsMenu() {
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm font-semibold">{application.nome}</span>
-                    <span className="block truncate text-xs text-muted-foreground">{application.client_id}</span>
                   </span>
                   <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
                 </a>

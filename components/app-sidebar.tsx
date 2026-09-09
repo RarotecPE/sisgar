@@ -26,7 +26,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { getMenuItems, getUserRole } from "@/lib/permissions"
 import { cn } from "@/lib/utils"
 
@@ -300,6 +300,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
             </Button>
           </SheetTrigger>
           <SheetContent side="left" className="w-64 border-sidebar-border bg-sidebar p-0">
+            <SheetTitle className="sr-only">Menu de navegação</SheetTitle>
             <div className="flex h-full flex-col">
               <SidebarContent />
             </div>

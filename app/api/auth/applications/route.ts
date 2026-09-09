@@ -9,10 +9,11 @@ type NexusApplication = {
   ativo?: boolean
 }
 
-type NexusApplicationsPayload = {
+type NexusApplicationsPayload = NexusApplication[] | {
   success?: boolean
   data?: NexusApplication[]
   message?: string
+  error?: string
 }
 
 type HeaderApplication = {
@@ -28,11 +29,11 @@ function getEnv(name: string, fallback?: string) {
   return value
 }
 
-function nexusHomeApplication(nexusBaseUrl: string): HeaderApplication {
+function nexusHomeApplication(request: NextRequest, nexusBaseUrl: string): HeaderApplication {
   return {
     nome: "RaroNexus",
     client_id: "raronexus",
-    logo_url: new URL("/logo.png", nexusBaseUrl).toString(),
+    logo_url: new URL("/raronexus-logo.png", request.nextUrl.origin).toString(),
     homepage_url: new URL("/home", nexusBaseUrl).toString(),
   }
 }
@@ -62,18 +63,24 @@ export async function GET(request: NextRequest) {
     console.error("raronexus_applications_fetch_failed", error)
     return NextResponse.json(
       { error: "Não foi possível carregar os aplicativos." },
-      { status: 502 }
+      { status: 502 },
     )
   }
 
-  if (!response.ok || !payload?.success || !Array.isArray(payload.data)) {
+  const nexusApplications = Array.isArray(payload) ? payload : payload?.data
+
+  if (!response.ok || !Array.isArray(nexusApplications)) {
+    const message = Array.isArray(payload)
+      ? "Não foi possível carregar os aplicativos."
+      : payload?.message ?? payload?.error ?? "Não foi possível carregar os aplicativos."
+
     return NextResponse.json(
-      { error: payload?.message ?? "Não foi possível carregar os aplicativos." },
-      { status: response.status || 502 }
+      { error: message },
+      { status: response.status || 502 },
     )
   }
 
-  const applications = payload.data
+  const applications = nexusApplications
     .filter((application) => (
       application.ativo !== false &&
       application.client_id !== currentClientId &&
@@ -87,7 +94,7 @@ export async function GET(request: NextRequest) {
     }))
 
   if (currentClientId !== "raronexus" && !applications.some((item) => item.client_id === "raronexus")) {
-    applications.unshift(nexusHomeApplication(nexusBaseUrl))
+    applications.unshift(nexusHomeApplication(request, nexusBaseUrl))
   }
 
   return NextResponse.json({
