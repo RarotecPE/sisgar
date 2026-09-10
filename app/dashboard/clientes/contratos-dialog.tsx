@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react"
 import useSWR from "swr"
 import { uploadArquivo } from "@/lib/upload-blob"
-import { Plus, Pencil, Trash2, FileText, Upload, Download, Loader2, X } from "lucide-react"
+import { Plus, Pencil, Trash2, FileText, Upload, Download, Loader2, X, ChevronDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -103,55 +103,71 @@ export function ContratosDialog({ cliente, open, onOpenChange }: ContratosDialog
                   onOpenChange={(open) => setExpandedContrato(open ? contrato.id : null)}
                 >
                   <div className="border rounded-lg">
-                    <CollapsibleTrigger className="w-full p-4 flex items-center justify-between hover:bg-muted/50">
-                      <div className="flex items-center gap-4">
-                        <div className="text-left">
-                          <p className="font-medium">{contrato.numero_contrato}</p>
-                          <p className="text-sm text-muted-foreground">{contrato.tipo}</p>
+                    <div className="w-full p-4 flex items-center justify-between hover:bg-muted/50">
+                      <CollapsibleTrigger asChild>
+                        <div className="flex-1 flex items-center justify-between cursor-pointer mr-4">
+                          <div className="flex items-center gap-4">
+                            <div className="text-left">
+                              <p className="font-medium">{contrato.numero_contrato}</p>
+                              <p className="text-sm text-muted-foreground">{contrato.tipo}</p>
+                            </div>
+                            <Badge variant={contrato.status === "ativo" ? "default" : "secondary"}>
+                              {contrato.status}
+                            </Badge>
+                          </div>
+                          <div className="text-right text-sm">
+                            <p>{formatDate(contrato.data_inicio)}</p>
+                            {contrato.valor_total && (
+                              <p className="font-medium">{formatCurrency(contrato.valor_total)}</p>
+                            )}
+                          </div>
                         </div>
-                        <Badge variant={contrato.status === "ativo" ? "default" : "secondary"}>
-                          {contrato.status}
-                        </Badge>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        <div className="text-right text-sm">
-                          <p>{formatDate(contrato.data_inicio)}</p>
-                          {contrato.valor_total && (
-                            <p className="font-medium">{formatCurrency(contrato.valor_total)}</p>
-                          )}
-                        </div>
-                        <div className="flex gap-1">
-{contrato.arquivo_url && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                // Para blobs privados, usa a API /api/file
-                                window.open(`/api/file?pathname=${encodeURIComponent(contrato.arquivo_url!)}`, "_blank")
-                              }}
-                              title="Baixar contrato"
-                            >
-                              <Download className="h-4 w-4" />
-                            </Button>
-                          )}
+                      </CollapsibleTrigger>
+                      <div className="flex items-center gap-1">
+                        {contrato.arquivo_url && (
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={(e) => { e.stopPropagation(); setSelectedContrato(contrato); setIsFormOpen(true) }}
+                            onClick={() => {
+                              // Para blobs privados/R2, usa a API /api/file
+                              window.open(`/api/file?pathname=${encodeURIComponent(contrato.arquivo_url!)}`, "_blank")
+                            }}
+                            title="Baixar contrato"
                           >
-                            <Pencil className="h-4 w-4" />
+                            <Download className="h-4 w-4" />
                           </Button>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => { setSelectedContrato(contrato); setIsFormOpen(true) }}
+                          title="Editar contrato"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDelete(contrato.id)}
+                          title="Excluir contrato"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                        <CollapsibleTrigger asChild>
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={(e) => { e.stopPropagation(); handleDelete(contrato.id) }}
+                            title={expandedContrato === contrato.id ? "Recolher" : "Expandir"}
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <ChevronDown
+                              className={`h-4 w-4 transition-transform duration-200 ${
+                                expandedContrato === contrato.id ? "rotate-180" : ""
+                              }`}
+                            />
                           </Button>
-                        </div>
+                        </CollapsibleTrigger>
                       </div>
-                    </CollapsibleTrigger>
+                    </div>
                     <CollapsibleContent>
                       <div className="px-4 pb-4 border-t pt-4">
                         {contrato.descricao && (

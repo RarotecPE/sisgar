@@ -1,4 +1,4 @@
-import { put } from "@vercel/blob"
+import { putStorageFile } from "@/lib/storage"
 import { type NextRequest, NextResponse } from "next/server"
 import { getSession } from "@/lib/auth"
 import { isOuveAtivo } from "@/lib/app-config"
@@ -55,10 +55,10 @@ export async function POST(request: NextRequest) {
     const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_")
     const pathname = `ouve/${timestamp}-${rand}-${safeName}`
 
-    const blob = await put(pathname, file, { access: "private" })
+    const result = await putStorageFile(pathname, file, { contentType: file.type })
 
     return NextResponse.json({
-      pathname: blob.pathname,
+      pathname: result.pathname,
       nome: file.name,
       tipo: file.type,
       tamanho: file.size,

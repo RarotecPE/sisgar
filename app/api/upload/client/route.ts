@@ -6,6 +6,13 @@ import { type NextRequest, NextResponse } from "next/server"
 // requisicao do servidor — assim evitamos o limite de ~4,5MB das rotas/funcoes
 // da plataforma, que causava "Falha no upload do arquivo" em PDFs maiores.
 export async function POST(request: NextRequest) {
+  if (!process.env.BLOB_READ_WRITE_TOKEN && !process.env.VERCEL_BLOB_READ_WRITE_TOKEN) {
+    return NextResponse.json(
+      { error: "Vercel Blob desativado neste ambiente. Use a rota unificada /api/upload." },
+      { status: 400 }
+    )
+  }
+
   const body = (await request.json()) as HandleUploadBody
 
   try {

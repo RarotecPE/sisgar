@@ -1,5 +1,6 @@
 import { sql } from "@/lib/db"
 import { NextRequest, NextResponse } from "next/server"
+import { getStorageFile } from "@/lib/storage"
 
 
 // GET /api/relatorios/anexos/[id] - Retorna o conteúdo do anexo (streaming)
@@ -21,36 +22,43 @@ export async function GET(
     }
 
     const anexo = anexos[0]
+    const fileRef = anexo.url || anexo.nome_arquivo
 
-    // Para blobs privados, precisamos fazer fetch usando o BLOB_READ_WRITE_TOKEN
-    // A URL do blob privado pode ser acessada server-side com o token
-    const blobUrl = anexo.url
-    
-    // Fazer download do blob usando o token de acesso
-    const response = await fetch(blobUrl, {
-      headers: {
-        // O token é automaticamente usado pelo Vercel em ambiente de produção
-        // Em desenvolvimento, precisamos passar o token
-        ...(process.env.BLOB_READ_WRITE_TOKEN && {
-          'Authorization': `Bearer ${process.env.BLOB_READ_WRITE_TOKEN}`
+    if (fileRef && (fileRef.startsWith("http://") || fileRef.startsWith("https://"))) {
+      try {
+        const response = await fetch(fileRef, {
+          headers: {
+            ...(process.env.BLOB_READ_WRITE_TOKEN && {
+              Authorization: `Bearer ${process.env.BLOB_READ_WRITE_TOKEN}`,
+            }),
+          },
         })
+        if (response.ok) {
+          const blob = await response.blob()
+          return new NextResponse(blob, {
+            headers: {
+              "Content-Type": anexo.tipo_arquivo || "application/octet-stream",
+              "Content-Disposition": `inline; filename="${anexo.nome_arquivo}"`,
+              "Content-Length": String(blob.size),
+            },
+          })
+        }
+      } catch (e) {
+        console.warn("Erro ao buscar URL remota do anexo:", e)
       }
-    })
-
-    if (!response.ok) {
-      console.error("Erro ao buscar blob:", response.status, response.statusText)
-      return NextResponse.json({ error: "Erro ao buscar arquivo" }, { status: 500 })
     }
 
-    // Retornar o arquivo diretamente
-    const blob = await response.blob()
-    
-    return new NextResponse(blob, {
+    const stored = await getStorageFile(fileRef)
+    if (!stored) {
+      return NextResponse.json({ error: "Arquivo não encontrado" }, { status: 404 })
+    }
+
+    return new NextResponse(stored.stream, {
       headers: {
-        'Content-Type': anexo.tipo_arquivo || 'application/octet-stream',
-        'Content-Disposition': `inline; filename="${anexo.nome_arquivo}"`,
-        'Content-Length': String(blob.size),
-      }
+        "Content-Type": stored.contentType || anexo.tipo_arquivo || "application/octet-stream",
+        "Content-Disposition": `inline; filename="${anexo.nome_arquivo}"`,
+        ...(stored.contentLength ? { "Content-Length": String(stored.contentLength) } : {}),
+      },
     })
   } catch (error) {
     console.error("Erro ao buscar anexo:", error)
