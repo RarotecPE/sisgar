@@ -70,8 +70,8 @@ export async function POST(request: Request) {
         if (existeUsuario.length === 0) {
           // Criar usuario
           await sql`
-            INSERT INTO usuarios (nome, email, senha_hash, cargo)
-            VALUES (${usuario.nome}, ${usuario.email}, ${senhaHash}, ${usuario.cargo})
+            INSERT INTO usuarios (nome, email, cargo)
+            VALUES (${usuario.nome}, ${usuario.email}, ${usuario.cargo})
           `
           resultados.usuarios.criados++
         } else {
