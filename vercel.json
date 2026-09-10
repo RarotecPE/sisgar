@@ -3,6 +3,10 @@
     {
       "path": "/api/apuracao/cron/emissao-automatica",
       "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/checklists/cron/gerar-mensal",
+      "schedule": "15 9 * * *"
     }
   ]
 }

@@ -12,7 +12,7 @@ export async function GET(
     const { id } = await params
 
     // Buscar anexo no banco
-    const anexos = await sql`
+    const anexos = await sql<any>`
       SELECT * FROM relatorios_anexos WHERE id = ${parseInt(id)}
     `
 

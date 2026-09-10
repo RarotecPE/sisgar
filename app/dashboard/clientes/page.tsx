@@ -47,6 +47,7 @@ import { ClienteForm } from "./cliente-form"
 import { ContratosDialog } from "./contratos-dialog"
 import { OrgaosDialog } from "./orgaos-dialog"
 import { ExportButton } from "@/components/export-button"
+import { ClientesLote } from "@/components/clientes-lote"
 import { exportToExcel, exportToPDF, exportToExcelMultiSheet, exportToPDFMultiSection } from "@/lib/export-utils"
 import type { Cliente } from "@/lib/types"
 
@@ -85,10 +86,28 @@ export default function ClientesPage() {
     setIsOrgaosOpen(true)
   }
 
-  const handleDelete = async (id: number) => {
-    if (!confirm("Tem certeza que deseja excluir este cliente?")) return
+  const handleDelete = async (cliente: Cliente) => {
+    if (!confirm(`Tem certeza que deseja excluir "${cliente.nome_fantasia || cliente.razao_social}"?`)) return
 
-    await fetch(`/api/clientes/${id}`, { method: "DELETE" })
+    const res = await fetch(`/api/clientes/${cliente.id}`, { method: "DELETE" })
+
+    // Clientes ja utilizados nao podem ser excluidos (409), apenas inativados.
+    if (res.status === 409) {
+      const data = await res.json().catch(() => ({}))
+      const inativar = confirm(
+        `${data.message || "Este cliente ja foi utilizado e nao pode ser excluido."}\n\nDeseja INATIVAR este cliente agora?`
+      )
+      if (inativar) {
+        await fetch(`/api/clientes/${cliente.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...cliente, ativo: false }),
+        })
+        mutate()
+      }
+      return
+    }
+
     mutate()
   }
 
@@ -256,7 +275,7 @@ export default function ClientesPage() {
             Gerencie as empresas parceiras
           </p>
         </div>
-        <div className="flex gap-2 w-full sm:w-auto">
+        <div className="flex flex-wrap gap-2 w-full sm:w-auto">
           <ExportButton
             onExportExcel={handleExportExcel}
             onExportPDF={handleExportPDF}
@@ -265,6 +284,7 @@ export default function ClientesPage() {
             detailsLabel="com Órgãos"
             disabled={!filteredClientes || filteredClientes.length === 0}
           />
+          <ClientesLote onImported={() => mutate()} />
           <Button onClick={() => { setSelectedCliente(null); setIsFormOpen(true); }} className="flex-1 sm:flex-none">
             <Plus className="mr-2 h-4 w-4" />
             Novo Cliente
@@ -427,7 +447,7 @@ export default function ClientesPage() {
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem 
-                              onClick={() => handleDelete(cliente.id)}
+                              onClick={() => handleDelete(cliente)}
                               className="text-destructive focus:text-destructive"
                             >
                               <Trash2 className="mr-2 h-4 w-4" />

@@ -234,14 +234,17 @@ export async function destroySession(): Promise<void> {
 export async function resolveTecnicoRarotecId(user: User): Promise<number | null> {
   try {
     let tecnicos = await sql`
-      SELECT id FROM tecnicos_rarotec WHERE LOWER(email) = LOWER(${user.email}) LIMIT 1
+      SELECT id FROM tecnicos_rarotec 
+      WHERE LOWER(COALESCE(nexus_email, '')) = LOWER(${user.email})
+         OR LOWER(COALESCE(email, '')) = LOWER(${user.email})
+      LIMIT 1
     `
     if (tecnicos.length === 0) {
       tecnicos = await sql`
         SELECT id FROM tecnicos_rarotec WHERE LOWER(nome) = LOWER(${user.nome}) LIMIT 1
       `
     }
-    return tecnicos.length > 0 ? tecnicos[0].id : null
+    return tecnicos.length > 0 ? Number(tecnicos[0].id) : null
   } catch {
     return null
   }
@@ -249,11 +252,14 @@ export async function resolveTecnicoRarotecId(user: User): Promise<number | null
 
 export async function resolveSetoresUsuario(user: User): Promise<string[]> {
   try {
-    let rows = await sql`
-      SELECT setores FROM tecnicos_rarotec WHERE LOWER(email) = LOWER(${user.email}) LIMIT 1
+    let rows = await sql<{ setores: string[] }>`
+      SELECT setores FROM tecnicos_rarotec 
+      WHERE LOWER(COALESCE(nexus_email, '')) = LOWER(${user.email})
+         OR LOWER(COALESCE(email, '')) = LOWER(${user.email})
+      LIMIT 1
     `
     if (rows.length === 0) {
-      rows = await sql`
+      rows = await sql<{ setores: string[] }>`
         SELECT setores FROM tecnicos_rarotec WHERE LOWER(nome) = LOWER(${user.nome}) LIMIT 1
       `
     }

@@ -2,6 +2,7 @@ import { redirect } from "next/navigation"
 import { getSession } from "@/lib/auth"
 import { AppSidebar } from "@/components/app-sidebar"
 import { DashboardHeaderActions } from "@/components/dashboard-header-actions"
+import { ChecklistPendenciaBanner } from "@/components/checklist-pendencia-banner"
 import { AuthProvider } from "@/lib/auth-context"
 
 export default async function DashboardLayout({
@@ -33,6 +34,7 @@ export default async function DashboardLayout({
             {children}
           </div>
         </main>
+        <ChecklistPendenciaBanner />
       </div>
     </AuthProvider>
   )

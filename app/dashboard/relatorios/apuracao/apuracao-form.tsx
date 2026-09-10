@@ -37,6 +37,11 @@ import {
   formatBRL,
   textoPadraoSugerido,
   totalItensServico,
+  sugestaoFracaoItem,
+  resumoConsumoContrato,
+  avaliarConsumo,
+  valorTotalAnualItem,
+  formatPercentual,
   fileUrl,
   type ApuracaoModelo,
   type ApuracaoItem,
@@ -92,6 +97,17 @@ export function ApuracaoForm({ relatorio }: Props) {
   const [valorGlobal, setValorGlobal] = useState(
     relatorio?.valor_global != null ? String(relatorio.valor_global) : "",
   )
+  // Controle de contrato (herdado do modelo; snapshot da emissao)
+  const [controleConsumo, setControleConsumo] = useState(relatorio?.controle_consumo ?? false)
+  const [mesesContrato, setMesesContrato] = useState<number>(relatorio?.meses_contrato ?? 12)
+  const [valorTotalContrato, setValorTotalContrato] = useState<number | null>(
+    relatorio?.valor_total_contrato != null ? Number(relatorio.valor_total_contrato) : null,
+  )
+  // Consumo ja emitido do contrato (R$), vindo do modelo — base p/ modos global/por_modulo.
+  const [consumidoEmitido, setConsumidoEmitido] = useState(0)
+  // Nº de apuracoes ja emitidas do modelo (indice 0-based desta emissao) — usado no preview da
+  // distribuicao mensal variavel por item.
+  const [emitidosCount, setEmitidosCount] = useState(0)
   const [texto, setTexto] = useState(relatorio?.texto || "")
   const [observacoes, setObservacoes] = useState(relatorio?.observacoes || "")
   const [remoto, setRemoto] = useState(relatorio?.modalidade_remoto ?? true)
@@ -134,6 +150,11 @@ export function ApuracaoForm({ relatorio }: Props) {
       setItensServico(Array.isArray(m.itens_servico) ? m.itens_servico : [])
       setModoValor(m.modo_valor || "global")
       setValorGlobal(m.valor_global != null ? String(m.valor_global) : "")
+      setControleConsumo(m.controle_consumo ?? false)
+      setMesesContrato(m.meses_contrato ?? 12)
+      setValorTotalContrato(m.valor_total_contrato != null ? Number(m.valor_total_contrato) : null)
+      setConsumidoEmitido(Number(m.consumido_emitido) || 0)
+      setEmitidosCount(Number(m.emitidos_count) || 0)
       setTexto(m.texto_padrao || "")
       setObservacoes(m.observacoes_padrao || "")
       setRemoto(m.modalidade_remoto)
@@ -260,6 +281,58 @@ export function ApuracaoForm({ relatorio }: Props) {
     if (modoValor === "por_item") return totalItensServico(itensServico)
     return Number(valorGlobal) || 0
   }, [modoValor, itens, itensServico, valorGlobal])
+
+  // Alertas de consumo: itens que esgotaram ou que so cabem fracionados nesta emissao.
+  // `quantidade_consumida_auto` vem do modelo (consumo ANTERIOR a esta emissao).
+  const alertasConsumo = useMemo(() => {
+    if (!controleConsumo || modoValor !== "por_item") return []
+    return itensServico
+      .map((it) => ({ item: it, s: sugestaoFracaoItem(it) }))
+      .filter(({ s, item }) => s.controlado && (s.esgotado || s.deveFracionar) && Number(item.quantidade) > 0)
+  }, [controleConsumo, modoValor, itensServico])
+
+  function aplicarFracao(descricao: string, quantidade: number) {
+    setItensServico((prev) =>
+      prev.map((i) => {
+        if (i.descricao !== descricao) return i
+        const unit = i.valor_unitario ?? (i.quantidade > 0 ? i.valor / i.quantidade : i.valor)
+        return { ...i, quantidade, valor: unit * quantidade }
+      }),
+    )
+  }
+
+  // Resumo do contrato PROJETADO com esta emissao: o consumo já registrado
+  // + o valor desta apuracao. Usado apenas na TELA para alertar quando o contrato passa
+  // de 80% — nao entra no PDF do relatorio. Vale para os tres modos de valor:
+  // - por_item: consumo por item (auto/manual) + Σ desta emissao.
+  // - global/por_modulo: consumo ja emitido (R$) + valor desta emissao.
+  const resumoContrato = useMemo(() => {
+    if (!controleConsumo) return null
+    if (modoValor === "por_item") {
+      return resumoConsumoContrato(itensServico, {
+        valorTotalContrato,
+        consumoAdicional: totalItensServico(itensServico),
+      })
+    }
+    // Total do contrato: override manual OU derivado do modo.
+    const totalDerivado =
+      modoValor === "por_modulo"
+        ? itens.reduce(
+            (s, i) =>
+              s +
+              valorTotalAnualItem({
+                valor: Number(i.valor) || 0,
+                quantidade: 0,
+                quantidade_contrato: i.quantidade_contrato,
+                valor_total: i.valor_total,
+              }),
+            0,
+          )
+        : (Number(valorGlobal) || 0) * (Number(mesesContrato) || 0)
+    const total = valorTotalContrato != null && valorTotalContrato > 0 ? valorTotalContrato : totalDerivado
+    const consumidoProjetado = consumidoEmitido + valorTotal
+    return avaliarConsumo(total, consumidoProjetado, { controlado: total > 0 })
+  }, [controleConsumo, modoValor, itensServico, itens, valorGlobal, mesesContrato, valorTotalContrato, consumidoEmitido, valorTotal])
 
   async function salvar(status: "rascunho" | "emitido") {
     if (clienteIds.length === 0 || !competencia || !numero) {
@@ -572,6 +645,39 @@ export function ApuracaoForm({ relatorio }: Props) {
               </div>
             </div>
 
+            {/* Alerta de 80% do contrato — vale para os tres modos de valor (so na tela) */}
+            {controleConsumo && resumoContrato?.controlado && resumoContrato.total > 0 && resumoContrato.emAlerta && (
+              <div
+                className={`space-y-2 rounded-lg border p-3 ${
+                  resumoContrato.esgotado
+                    ? "border-destructive/40 bg-destructive/10"
+                    : "border-amber-500/50 bg-amber-50"
+                }`}
+              >
+                <p
+                  className={`flex items-center gap-1.5 text-sm font-medium ${
+                    resumoContrato.esgotado ? "text-destructive" : "text-amber-800"
+                  }`}
+                >
+                  <AlertTriangle className="h-4 w-4" />
+                  {resumoContrato.esgotado
+                    ? "Contrato esgotado com esta emissao"
+                    : "Contrato acima de 80% do valor total"}
+                </p>
+                <p className={`text-xs ${resumoContrato.esgotado ? "text-destructive" : "text-amber-900"}`}>
+                  Com esta apuracao, o consumo projetado chega a{" "}
+                  <strong>{formatPercentual(resumoContrato.percentual)}</strong> —{" "}
+                  {formatBRL(resumoContrato.consumido)} de {formatBRL(resumoContrato.total)}.
+                </p>
+                <div className="h-2 w-full overflow-hidden rounded-full bg-white/60">
+                  <div
+                    className={`h-full rounded-full ${resumoContrato.esgotado ? "bg-destructive" : "bg-amber-500"}`}
+                    style={{ width: `${Math.min(100, resumoContrato.percentual * 100)}%` }}
+                  />
+                </div>
+              </div>
+            )}
+
             {modoValor === "por_modulo" && itens.length > 0 && (
               <div className="space-y-2 rounded-lg border p-3">
                 {itens.map((i) => (
@@ -590,7 +696,52 @@ export function ApuracaoForm({ relatorio }: Props) {
             )}
 
             {modoValor === "por_item" && (
-              <ItensServicoEditor itens={itensServico} onChange={setItensServico} />
+              <div className="space-y-3">
+                {controleConsumo && alertasConsumo.length > 0 && (
+                  <div className="space-y-2 rounded-lg border border-amber-500/50 bg-amber-50 p-3">
+                    <p className="flex items-center gap-1.5 text-sm font-medium text-amber-800">
+                      <AlertTriangle className="h-4 w-4" />
+                      Atencao ao saldo do contrato nesta emissao
+                    </p>
+                    {alertasConsumo.map(({ item, s }) => (
+                      <div
+                        key={item.descricao}
+                        className="flex flex-wrap items-center justify-between gap-2 text-xs text-amber-900"
+                      >
+                        <span className="flex-1">
+                          <strong>{item.descricao || "Item"}</strong>{" "}
+                          {s.esgotado ? (
+                            <>saldo esgotado (disponivel {s.disponivel.toLocaleString("pt-BR")} {item.unidade}).</>
+                          ) : (
+                            <>
+                              so restam {s.disponivel.toLocaleString("pt-BR")} {item.unidade} de{" "}
+                              {s.mensalCheio.toLocaleString("pt-BR")} do mes cheio.
+                            </>
+                          )}
+                        </span>
+                        {!s.esgotado && s.deveFracionar && (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            className="h-7 border-amber-600 text-amber-800 hover:bg-amber-100"
+                            onClick={() => aplicarFracao(item.descricao, s.quantidadeSugerida)}
+                          >
+                            Aplicar fracao ({s.quantidadeSugerida.toLocaleString("pt-BR")})
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <ItensServicoEditor
+                  itens={itensServico}
+                  onChange={setItensServico}
+                  mesesContrato={mesesContrato}
+                  controleConsumo={controleConsumo}
+                  previewIndice={emitidosCount}
+                />
+              </div>
             )}
           </CardContent>
         </Card>

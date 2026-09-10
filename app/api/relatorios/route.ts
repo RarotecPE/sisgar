@@ -115,7 +115,18 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const data = await request.json()
-    
+
+    // Validação: todo relatório precisa de um local (cliente OU município).
+    // Evita registros salvos como "Local não informado".
+    const temCliente = data.cliente_id != null
+    const temMunicipio = typeof data.municipio === "string" && data.municipio.trim() !== ""
+    if (!temCliente && !temMunicipio) {
+      return NextResponse.json(
+        { error: "Informe o cliente/entidade ou o município do atendimento." },
+        { status: 400 },
+      )
+    }
+
     // Gera numero de autenticacao
     const numeroAutenticacao = gerarNumeroAutenticacao()
     

@@ -13,7 +13,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   const docId = parseInt(id)
 
   try {
-    const rows = await sql`SELECT * FROM documentos_institucionais WHERE id = ${docId}`
+    const rows = await sql<any>`SELECT * FROM documentos_institucionais WHERE id = ${docId}`
     if (rows.length === 0) return NextResponse.json({ error: "Nao encontrado" }, { status: 404 })
     const doc = rows[0]
     if (!(await podeVerDocumento(user, doc))) {

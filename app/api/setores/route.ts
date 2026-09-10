@@ -8,13 +8,13 @@ export async function GET() {
   if (!user) return NextResponse.json({ error: "Nao autorizado" }, { status: 401 })
 
   try {
-    const rows = await sql`
+    const rows = await sql<{ setor: string }>`
       SELECT DISTINCT TRIM(s) AS setor
       FROM tecnicos_rarotec, UNNEST(setores) AS s
       WHERE s IS NOT NULL AND TRIM(s) <> ''
       ORDER BY setor
     `
-    return NextResponse.json(rows.map((r: { setor: string }) => r.setor))
+    return NextResponse.json(rows.map((r) => r.setor))
   } catch (error) {
     console.error("Error fetching setores:", error)
     return NextResponse.json({ error: "Erro ao buscar setores" }, { status: 500 })

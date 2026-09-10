@@ -1,5 +1,6 @@
 import { sql } from "@/lib/db"
 import { NextRequest, NextResponse } from "next/server"
+import { aplicarDistribuicaoEmissao } from "@/lib/apuracao"
 
 // GET /api/apuracao/relatorios?cliente_id=&modelo_id=&competencia=&exercicio=&modulo=&status=
 export async function GET(request: NextRequest) {
@@ -77,7 +78,42 @@ export async function POST(request: NextRequest) {
 
     const exercicio = d.exercicio || parseInt(String(d.competencia).slice(0, 4))
     const itens = d.itens || []
-    const itensServico = Array.isArray(d.itens_servico) ? d.itens_servico : []
+    let itensServico = Array.isArray(d.itens_servico) ? d.itens_servico : []
+
+    // Snapshot dos campos de contrato: busca do modelo na emissao (fonte unica).
+    let snap = {
+      meses_contrato: d.meses_contrato ?? null,
+      valor_total_contrato: d.valor_total_contrato ?? null,
+      controle_consumo: d.controle_consumo ?? false,
+      valor_consumido_inicial: d.valor_consumido_inicial ?? null,
+      meses_consumidos_inicial: d.meses_consumidos_inicial ?? null,
+    }
+    if (d.modelo_id) {
+      const mrows = await sql`
+        SELECT meses_contrato, valor_total_contrato, controle_consumo,
+               valor_consumido_inicial, meses_consumidos_inicial
+        FROM apuracao_modelos WHERE id = ${d.modelo_id}
+      `
+      if (mrows[0]) snap = { ...snap, ...mrows[0] }
+    }
+
+    // Distribuicao mensal variavel: para itens marcados, a quantidade emitida varia por ORDEM
+    // DE EMISSAO. Ao EMITIR (status 'emitido') com modelo vinculado, o servidor sobrescreve o
+    // snapshot com o valor do mes correspondente (indice = nº de relatorios ja emitidos, 0-based).
+    if (d.modelo_id && (d.status || "rascunho") === "emitido") {
+      const temDistribuicao = itensServico.some(
+        (i: any) => i?.distribuir_mensal && Array.isArray(i?.distribuicao_mensal),
+      )
+      if (temDistribuicao) {
+        const cnt = await sql`
+          SELECT COUNT(*)::int AS n FROM apuracao_relatorios
+          WHERE modelo_id = ${d.modelo_id} AND status = 'emitido'
+        `
+        const indice = Number(cnt[0]?.n) || 0
+        itensServico = aplicarDistribuicaoEmissao(itensServico as any, indice)
+      }
+    }
+
     const valorTotal =
       d.modo_valor === "por_modulo"
         ? itens.reduce((s: number, i: any) => s + (Number(i.valor) || 0), 0)
@@ -90,7 +126,8 @@ export async function POST(request: NextRequest) {
         modelo_id, cliente_id, cliente_ids, municipio, numero, numero_texto, competencia, exercicio, data_emissao,
         sigla_orgao, numero_contrato_texto, destinatario_nome, destinatario_cargo,
         itens, itens_servico, modo_valor, valor_global, valor_total, texto, observacoes,
-        modalidade_remoto, modalidade_presencial, origem, visitas_ids, imagens, anexos_pdf, status
+        modalidade_remoto, modalidade_presencial, origem, visitas_ids, imagens, anexos_pdf, status,
+        meses_contrato, valor_total_contrato, controle_consumo, valor_consumido_inicial, meses_consumidos_inicial
       ) VALUES (
         ${d.modelo_id || null}, ${clientePrincipal}, ${JSON.stringify(clienteIds)}, ${d.municipio || null},
         ${d.numero}, ${d.numero_texto || String(d.numero).padStart(3, "0")},
@@ -103,7 +140,9 @@ export async function POST(request: NextRequest) {
         ${d.modalidade_remoto ?? true}, ${d.modalidade_presencial ?? false},
         ${d.origem || "padrao"}, ${JSON.stringify(d.visitas_ids || [])},
         ${JSON.stringify(d.imagens || [])}, ${JSON.stringify(d.anexos_pdf || [])},
-        ${d.status || "rascunho"}
+        ${d.status || "rascunho"},
+        ${snap.meses_contrato}, ${snap.valor_total_contrato}, ${snap.controle_consumo},
+        ${snap.valor_consumido_inicial}, ${snap.meses_consumidos_inicial}
       )
       RETURNING *
     `

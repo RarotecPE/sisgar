@@ -513,7 +513,6 @@ export default function NovoRelatorioPage() {
     setClienteSearch("")
     setEntidades([])
     setModulosSelecionados([])
-    setServicosSelecionados([])
     setResumo("")
     setDataServico(new Date())
     setTecnicosSelecionados([])
@@ -525,15 +524,29 @@ export default function NovoRelatorioPage() {
   }
 
   const handleSubmit = async () => {
+    // Determina estado/municipio baseado no modo
+    const estadoFinal = modoLocalizacao === "cliente" && clienteSelecionado
+      ? clienteSelecionado.estado
+      : estado
+    const municipioFinal = modoLocalizacao === "cliente" && clienteSelecionado
+      ? clienteSelecionado.cidade
+      : municipio
+
+    // Validação: todo relatório precisa de um local (cliente ou município).
+    // Impede novos registros salvos como "Local não informado".
+    if (modoLocalizacao === "cliente" && !clienteId) {
+      alert("Selecione o cliente/entidade atendida antes de salvar o relatório.")
+      setCurrentStep(1)
+      return
+    }
+    if (modoLocalizacao !== "cliente" && (!municipioFinal || !municipioFinal.trim())) {
+      alert("Informe o município do atendimento antes de salvar o relatório.")
+      setCurrentStep(1)
+      return
+    }
+
     setLoading(true)
     try {
-      // Determina estado/municipio baseado no modo
-      const estadoFinal = modoLocalizacao === "cliente" && clienteSelecionado 
-        ? clienteSelecionado.estado 
-        : estado
-      const municipioFinal = modoLocalizacao === "cliente" && clienteSelecionado 
-        ? clienteSelecionado.cidade 
-        : municipio
 
       const formData = {
         tipo_servico: tiposRelatorio.map(t => TIPOS_RELATORIO.find(tr => tr.value === t)?.label).join(", "),
@@ -1557,7 +1570,7 @@ export default function NovoRelatorioPage() {
                   return tecnico ? { nome: tecnico.nome, email: tecnico.email || "" } : { nome: "", email: "" }
                 }).filter(t => t.nome)}
                 clienteNome={clienteSelecionado?.nome_fantasia || clienteSelecionado?.razao_social}
-                clienteEmail={clienteSelecionado?.email}
+                clienteEmail={clienteSelecionado?.email || undefined}
                 representantes={tecnicosCliente.map(tc => ({ nome: tc.nome, email: tc.email || "" })).filter(r => r.nome)}
                 municipio={modoLocalizacao === "cliente" && clienteSelecionado?.cidade ? clienteSelecionado.cidade : municipio}
                 tipoServico={tiposRelatorio.map(t => TIPOS_RELATORIO.find(tr => tr.value === t)?.label || t).join(", ")}

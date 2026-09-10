@@ -39,7 +39,7 @@ export async function POST(request: Request) {
     }
 
     // Buscar dados do relatório
-    const relatorios = await sql`
+    const relatorios = await sql<any>`
       SELECT 
         r.*,
         t.nome as tecnico_nome,

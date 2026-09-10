@@ -3,7 +3,7 @@ import { sql } from "@/lib/db"
 // Le um valor de configuracao global. Retorna null se nao existir.
 export async function getConfig(chave: string): Promise<string | null> {
   try {
-    const rows = await sql`SELECT valor FROM app_config WHERE chave = ${chave} LIMIT 1`
+    const rows = await sql<{ valor: string }>`SELECT valor FROM app_config WHERE chave = ${chave} LIMIT 1`
     return rows.length > 0 ? rows[0].valor : null
   } catch {
     return null

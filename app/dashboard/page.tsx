@@ -2,15 +2,12 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Users, Building2, FileText, Calendar, TrendingUp, Clock, ArrowRight, AlertTriangle, MapPin, CalendarClock, Check, X, Stethoscope, ClipboardCheck } from "lucide-react"
-import { LABEL_TIPO_MEDICO } from "@/lib/documentos-medicos"
+import { Users, Building2, FileText, Calendar, ArrowRight } from "lucide-react"
 import Link from "next/link"
 import useSWR from "swr"
 import { useSession } from "@/lib/auth-context"
 import { isGestor } from "@/lib/permissions"
-import { format } from "date-fns"
-import { ptBR } from "date-fns/locale"
+import { CentralAvisos } from "@/components/central-avisos"
 
 const fetcher = (url: string) => fetch(url).then(res => res.json())
 
@@ -20,37 +17,27 @@ const statCards = [
     title: "Tecnicos Ativos",
     description: "Profissionais em campo",
     icon: Users,
-    color: "text-blue-600 dark:text-blue-300",
-    bgColor: "bg-blue-50 dark:bg-blue-400/15",
+    color: "text-blue-600",
+    bgColor: "bg-blue-50",
     key: "tecnicos",
     href: "/dashboard/tecnicos-rarotec",
     gestorOnly: true,
   },
   {
     title: "Clientes",
-    description: "Empresas atendidas",
+    description: "Bases atendidas",
     icon: Building2,
-    color: "text-emerald-600 dark:text-emerald-300",
-    bgColor: "bg-emerald-50 dark:bg-emerald-400/15",
+    color: "text-emerald-600",
+    bgColor: "bg-emerald-50",
     key: "clientes",
     href: "/dashboard/clientes",
-  },
-  {
-    title: "Pendentes",
-    description: "Atendimentos sem relatório",
-    icon: FileText,
-    color: "text-amber-600 dark:text-amber-300",
-    bgColor: "bg-amber-50 dark:bg-amber-400/15",
-    key: "relatoriosPendentes",
-    href: "/dashboard/relatorios/batimento",
-    gestorOnly: true, // Apenas gestores veem pendências de batimento
   },
   {
     title: "Agenda Hoje",
     description: "Compromissos do dia",
     icon: Calendar,
-    color: "text-violet-600 dark:text-violet-300",
-    bgColor: "bg-violet-50 dark:bg-violet-400/15",
+    color: "text-violet-600",
+    bgColor: "bg-violet-50",
     key: "agendaHoje",
     href: "/dashboard/agenda",
   },
@@ -60,70 +47,32 @@ export default function DashboardPage() {
   const { user } = useSession()
   const userIsGestor = user?.nome ? isGestor(user.nome, user.cargo) : false
   const tecnicoId = user?.tecnico_rarotec_id
-  
+
   // Construir URLs com parâmetros de filtro
   const statsUrl = `/api/dashboard/stats?is_gestor=${userIsGestor}${tecnicoId ? `&tecnico_id=${tecnicoId}` : ''}`
   const activitiesUrl = `/api/dashboard/activities?is_gestor=${userIsGestor}${tecnicoId ? `&tecnico_id=${tecnicoId}` : ''}`
   const scheduleUrl = `/api/dashboard/schedule?is_gestor=${userIsGestor}${tecnicoId ? `&tecnico_id=${tecnicoId}` : ''}`
-  
-  // Buscar estatísticas
+
   const { data: stats } = useSWR(statsUrl, fetcher)
-  
-  // Buscar atividades recentes
   const { data: activities } = useSWR(activitiesUrl, fetcher)
-  
-  // Buscar próximos compromissos
   const { data: schedule } = useSWR(scheduleUrl, fetcher)
-  
-  // Buscar pendências de batimento do usuário
-  const { data: pendencias } = useSWR(
-    user?.tecnico_rarotec_id ? `/api/dashboard/pendencias?tecnico_id=${user.tecnico_rarotec_id}` : null,
-    fetcher
-  )
-  
-  // Buscar pendências de documentação médica (gestor vê de todos; técnico vê as próprias)
-  const pendenciasMedicasUrl = userIsGestor
-    ? '/api/dashboard/pendencias-medicas'
-    : tecnicoId
-      ? `/api/dashboard/pendencias-medicas?tecnico_id=${tecnicoId}`
-      : null
-  const { data: pendenciasMedicas } = useSWR(pendenciasMedicasUrl, fetcher)
-  
-  // Buscar documentos medicos aguardando analise/validacao (apenas gestores)
-  const { data: documentosAnalise } = useSWR(
-    userIsGestor ? '/api/dashboard/documentos-analise' : null,
-    fetcher
-  )
-  
-  // Buscar solicitações de agenda pendentes (apenas para gestores)
-  const { data: solicitacoesPendentes, mutate: mutateSolicitacoes } = useSWR(
-    userIsGestor ? '/api/agenda-solicitacoes/pendentes' : null,
-    fetcher
-  )
-  
-  // Função para aprovar/rejeitar solicitação
-  const handleSolicitacao = async (id: number, acao: 'aprovar' | 'rejeitar') => {
-    try {
-      await fetch('/api/agenda-solicitacoes', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          id, 
-          status: acao === 'aprovar' ? 'aprovado' : 'rejeitado',
-          aprovado_por: user?.id
-        })
-      })
-      mutateSolicitacoes()
-    } catch (error) {
-      console.error('Erro ao processar solicitação:', error)
-    }
-  }
-  
+
   // Filtrar cards baseado em permissões
   const visibleStatCards = statCards.filter(card => {
     if (card.gestorOnly && !userIsGestor) return false
     return true
   })
+
+  // Grade dinâmica: os cards preenchem toda a largura independentemente da quantidade.
+  // Strings literais completas para o JIT do Tailwind detectar.
+  const statsGridCols =
+    visibleStatCards.length >= 4
+      ? "lg:grid-cols-4"
+      : visibleStatCards.length === 3
+        ? "lg:grid-cols-3"
+        : visibleStatCards.length === 2
+          ? "lg:grid-cols-2"
+          : "lg:grid-cols-1"
 
   return (
     <div className="p-6 lg:p-8">
@@ -131,255 +80,19 @@ export default function DashboardPage() {
       <div className="mb-8">
         <h1 className="text-2xl font-semibold text-foreground">Dashboard</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Visão geral do Sistema de Gestão Administrativa
+          Visao geral do Sistema de Gestao Administrativa
         </p>
       </div>
 
-      {/* Alerta de Pendências de Batimento */}
-      {pendencias && pendencias.length > 0 && (
-        <Card className="mb-8 border-amber-300/70 bg-amber-50/80 dark:border-amber-400/25 dark:bg-amber-950/25">
-          <CardContent className="p-4">
-            <div className="flex items-start gap-4">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-amber-100 dark:bg-amber-400/15">
-                <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-300" />
-              </div>
-              <div className="flex-1">
-                <h3 className="font-semibold text-amber-900 dark:text-amber-100">
-                  Pendências de Relatório ({pendencias.length})
-                </h3>
-                <p className="text-sm text-amber-700 dark:text-amber-200 mt-1">
-                  Você possui visitas a clientes/municípios sem relatório correspondente
-                </p>
-                <div className="mt-3 space-y-2">
-                  {pendencias.slice(0, 3).map((p: any) => (
-                    <div key={p.id} className="flex items-center gap-2 text-sm text-amber-900 bg-amber-100/70 dark:text-amber-100 dark:bg-amber-400/10 rounded-md px-3 py-2">
-                      <MapPin className="h-4 w-4 shrink-0" />
-                      <span className="font-medium">{p.local || p.titulo}</span>
-                      <span className="text-amber-600 dark:text-amber-300">-</span>
-                      <span>{format(new Date(String(p.data_inicio).slice(0, 10) + "T12:00:00"), "dd/MM/yyyy", { locale: ptBR })}</span>
-                    </div>
-                  ))}
-                  {pendencias.length > 3 && (
-                    <p className="text-xs text-amber-600 dark:text-amber-300">
-                      + {pendencias.length - 3} outras pendências
-                    </p>
-                  )}
-                </div>
-                <Link 
-                  href="/dashboard/relatorios/novo"
-                  className="inline-flex items-center gap-1 mt-3 text-sm font-medium text-amber-700 dark:text-amber-200 hover:text-amber-900 dark:hover:text-amber-100"
-                >
-                  Criar Relatório
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Alerta de Documentação Médica Pendente (vermelho) */}
-      {pendenciasMedicas && pendenciasMedicas.length > 0 && (
-        <Card className="mb-8 border-red-300/70 bg-red-50/80 dark:border-rose-400/30 dark:bg-rose-950/25">
-          <CardContent className="p-4">
-            <div className="flex items-start gap-4">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-red-100 dark:bg-rose-400/15">
-                <Stethoscope className="h-5 w-5 text-red-600 dark:text-rose-300" />
-              </div>
-              <div className="flex-1">
-                <h3 className="font-semibold text-red-900 dark:text-rose-100">
-                  Documentação Médica Pendente ({pendenciasMedicas.length})
-                </h3>
-                <p className="text-sm text-red-700 dark:text-rose-200 mt-1">
-                  {userIsGestor
-                    ? "Existem eventos médicos na agenda sem documento (atestado/licença) anexado"
-                    : "Você possui eventos médicos na agenda sem documento anexado"}
-                </p>
-                <div className="mt-3 space-y-2">
-                  {pendenciasMedicas.slice(0, 3).map((p: any) => (
-                    <div key={p.id} className="flex items-center gap-2 text-sm text-red-900 bg-red-100/70 dark:text-rose-100 dark:bg-rose-400/10 rounded-md px-3 py-2">
-                      <AlertTriangle className="h-4 w-4 shrink-0" />
-                      <span className="font-medium">{LABEL_TIPO_MEDICO[p.tipo] || p.tipo}</span>
-                      {userIsGestor && p.tecnico_nome && (
-                        <>
-                          <span className="text-red-600 dark:text-rose-300">-</span>
-                          <span>{p.tecnico_nome}</span>
-                        </>
-                      )}
-                      <span className="text-red-600 dark:text-rose-300">-</span>
-                      <span>{format(new Date(String(p.data_inicio).slice(0, 10) + "T12:00:00"), "dd/MM/yyyy", { locale: ptBR })}</span>
-                    </div>
-                  ))}
-                  {pendenciasMedicas.length > 3 && (
-                    <p className="text-xs text-red-600 dark:text-rose-300">
-                      + {pendenciasMedicas.length - 3} outras pendências
-                    </p>
-                  )}
-                </div>
-                <Link 
-                  href="/dashboard/documentos-medicos/anexos"
-                  className="inline-flex items-center gap-1 mt-3 text-sm font-medium text-red-700 dark:text-rose-200 hover:text-red-900 dark:hover:text-rose-100"
-                >
-                  Anexar Documento
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Alerta de Documentos Medicos Aguardando Analise (teal) - Apenas para gestores */}
-      {userIsGestor && documentosAnalise && documentosAnalise.length > 0 && (
-        <Card className="mb-8 border-teal-300/70 bg-teal-50/80 dark:border-cyan-400/25 dark:bg-cyan-950/25">
-          <CardContent className="p-4">
-            <div className="flex items-start gap-4">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-teal-100 dark:bg-cyan-400/15">
-                <ClipboardCheck className="h-5 w-5 text-teal-600 dark:text-cyan-300" />
-              </div>
-              <div className="flex-1">
-                <h3 className="font-semibold text-teal-900 dark:text-cyan-100">
-                  Documentos Medicos para Analise ({documentosAnalise.length})
-                </h3>
-                <p className="text-sm text-teal-700 dark:text-cyan-200 mt-1">
-                  Documentos anexados por tecnicos aguardando validacao da coordenacao/gerencia
-                </p>
-                <div className="mt-3 space-y-2">
-                  {documentosAnalise.slice(0, 3).map((d: any) => (
-                    <div key={d.id} className="flex items-center gap-2 text-sm text-teal-900 bg-teal-100/70 dark:text-cyan-100 dark:bg-cyan-400/10 rounded-md px-3 py-2">
-                      <Stethoscope className="h-4 w-4 shrink-0" />
-                      <span className="font-medium">{LABEL_TIPO_MEDICO[d.tipo] || d.tipo}</span>
-                      {d.tecnico_nome && (
-                        <>
-                          <span className="text-teal-600 dark:text-cyan-300">-</span>
-                          <span className="truncate">{d.tecnico_nome}</span>
-                        </>
-                      )}
-                      <span className="text-teal-600 dark:text-cyan-300">-</span>
-                      <span>{format(new Date(String(d.data_inicio).slice(0, 10) + "T12:00:00"), "dd/MM/yyyy", { locale: ptBR })}</span>
-                    </div>
-                  ))}
-                  {documentosAnalise.length > 3 && (
-                    <p className="text-xs text-teal-600 dark:text-cyan-300">
-                      + {documentosAnalise.length - 3} outros documentos
-                    </p>
-                  )}
-                </div>
-                <Link 
-                  href="/dashboard/documentos-medicos/batimento"
-                  className="inline-flex items-center gap-1 mt-3 text-sm font-medium text-teal-700 dark:text-cyan-200 hover:text-teal-900 dark:hover:text-cyan-100"
-                >
-                  Analisar Documentos
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Solicitações de Agenda Pendentes - Apenas para gestores */}
-      {userIsGestor && solicitacoesPendentes && solicitacoesPendentes.length > 0 && (
-        <Card className="mb-8 border-sky-300/70 bg-sky-50/80 dark:border-blue-400/30 dark:bg-blue-950/25">
-          <CardContent className="p-4">
-            <div className="flex items-start gap-4">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-sky-100 dark:bg-blue-400/15">
-                <CalendarClock className="h-5 w-5 text-blue-600 dark:text-blue-300" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <h3 className="font-semibold text-blue-900 dark:text-blue-100">
-                  Solicitações de Agenda ({solicitacoesPendentes.length})
-                </h3>
-                <p className="text-sm text-blue-700 dark:text-blue-200 mt-1">
-                  Técnicos solicitaram alterações em suas agendas
-                </p>
-                <div className="mt-3 space-y-2">
-                  {solicitacoesPendentes.slice(0, 5).map((s: any) => {
-                    const alteracao = s.dados_alteracao
-                    const isAlteracao = s.tipo_solicitacao === 'alteracao'
-                    const tipoLabel = alteracao?.tipo_evento === 'visita' ? 'Visita Técnica' 
-                      : alteracao?.tipo_evento === 'treinamento' ? 'Treinamento'
-                      : alteracao?.tipo_evento === 'reuniao' ? 'Reunião'
-                      : alteracao?.tipo_evento === 'interno' ? 'Interno'
-                      : alteracao?.tipo_evento === 'folga' ? 'Folga'
-                      : alteracao?.tipo_evento === 'ferias' ? 'Férias'
-                      : alteracao?.tipo_evento === 'atestado' ? 'Atestado'
-                      : alteracao?.tipo_evento || ''
-                    
-                    return (
-                    <div key={s.id} className="flex items-center justify-between gap-2 text-sm text-blue-900 bg-sky-100/70 dark:text-blue-100 dark:bg-blue-400/10 rounded-md px-3 py-2">
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate">{s.tecnico_nome || 'Técnico'}</p>
-                        <p className="text-xs text-blue-600 dark:text-blue-300 line-clamp-2 break-words">
-                          {s.tipo_solicitacao === 'novo' ? 'Novo Agendamento' : s.tipo_solicitacao === 'alteracao' ? 'Alteração' : s.tipo_solicitacao === 'cancelamento' ? 'Cancelamento' : 'Outro'}
-                          {s.descricao && `: ${s.descricao}`}
-                        </p>
-                        
-                    {/* Mostrar detalhes da alteração */}
-                    {isAlteracao && s.evento_data && alteracao?.data_sugerida && (
-                      <p className="text-xs text-blue-600 dark:text-blue-300">
-                        <span className="font-medium">Data:</span> {format(new Date(s.evento_data), "dd/MM/yyyy", { locale: ptBR })} &rarr; {format(new Date(alteracao.data_sugerida + 'T12:00:00'), "dd/MM/yyyy", { locale: ptBR })}
-                      </p>
-                    )}
-                    {isAlteracao && s.evento_local !== alteracao?.municipio && alteracao?.municipio && (
-                      <p className="text-xs text-blue-600 dark:text-blue-300">
-                        <span className="font-medium">Local:</span> {s.evento_local || '(vazio)'} &rarr; {alteracao.municipio}
-                      </p>
-                    )}
-                    {isAlteracao && s.evento_tipo !== alteracao?.tipo_evento && alteracao?.tipo_evento && (
-                      <p className="text-xs text-blue-600 dark:text-blue-300">
-                        <span className="font-medium">Tipo:</span> {s.evento_tipo || '(vazio)'} &rarr; {tipoLabel}
-                      </p>
-                    )}
-                        
-                        {/* Para novos agendamentos */}
-                        {s.tipo_solicitacao === 'novo' && (
-                          <p className="text-xs text-blue-600 dark:text-blue-300">
-                            {tipoLabel} - {alteracao?.municipio || 'Sem local'} - {alteracao?.data_sugerida ? format(new Date(alteracao.data_sugerida + 'T12:00:00'), "dd/MM/yyyy", { locale: ptBR }) : ''}
-                          </p>
-                        )}
-                        
-                        {/* Para cancelamentos e outros */}
-                        {s.tipo_solicitacao !== 'novo' && s.tipo_solicitacao !== 'alteracao' && s.evento_titulo && (
-                          <p className="text-xs text-blue-600 dark:text-blue-300">
-                            {s.evento_titulo} - {s.evento_data ? format(new Date(s.evento_data), "dd/MM/yyyy", { locale: ptBR }) : ''}
-                          </p>
-                        )}
-                      </div>
-                      <div className="flex gap-1 shrink-0">
-                        <Button 
-                          size="sm" 
-                          variant="ghost" 
-                          className="h-7 w-7 p-0 text-green-600 hover:text-green-700 hover:bg-green-100 dark:text-emerald-300 dark:hover:bg-emerald-400/10 dark:hover:text-emerald-200"
-                          onClick={() => handleSolicitacao(s.id, 'aprovar')}
-                        >
-                          <Check className="h-4 w-4" />
-                        </Button>
-                        <Button 
-                          size="sm" 
-                          variant="ghost" 
-                          className="h-7 w-7 p-0 text-red-600 dark:text-rose-300 hover:text-red-700 dark:text-rose-200 hover:bg-red-100"
-                          onClick={() => handleSolicitacao(s.id, 'rejeitar')}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                    )
-                  })}
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      {/* Central de avisos: consolida todos os alertas em quadros compactos e expansíveis */}
+      <CentralAvisos />
 
       {/* Stats Grid */}
-      <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className={`mb-8 grid gap-4 sm:grid-cols-2 ${statsGridCols}`}>
         {visibleStatCards.map((card) => {
           const Icon = card.icon
           const value = stats?.[card.key as keyof typeof stats] ?? 0
-          
+
           return (
             <Link key={card.key} href={card.href}>
               <Card className="group relative overflow-hidden transition-all duration-200 hover:shadow-md hover:border-primary/20">
@@ -393,8 +106,8 @@ export default function DashboardPage() {
                         {value}
                       </p>
                       <p className="mt-1 text-xs text-muted-foreground">
-                        {card.key === "agendaHoje" && !userIsGestor 
-                          ? "Meus compromissos hoje" 
+                        {card.key === "agendaHoje" && !userIsGestor
+                          ? "Meus compromissos hoje"
                           : card.description}
                       </p>
                     </div>
@@ -423,7 +136,7 @@ export default function DashboardPage() {
                 {userIsGestor ? "Últimos relatórios registrados" : "Meus últimos relatórios"}
               </CardDescription>
             </div>
-            <Link 
+            <Link
               href="/dashboard/relatorios"
               className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
@@ -454,15 +167,15 @@ export default function DashboardPage() {
                         {String(activity.cliente || activity.municipio || "Nao informado")}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {activity.tipo_servico ? String(activity.tipo_servico) : "Visita técnica"} - {new Date(String(activity.data)).toLocaleDateString("pt-BR")}
+                        {activity.tipo_servico ? String(activity.tipo_servico) : "Visita tecnica"} - {new Date(String(activity.data)).toLocaleDateString("pt-BR")}
                       </p>
                     </div>
-                    <Badge 
+                    <Badge
                       variant={activity.status === "concluido" ? "default" : "secondary"}
                       className={
                         activity.status === "concluido"
                           ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-100"
-                          : "bg-amber-100 text-amber-700 dark:text-amber-200 hover:bg-amber-100"
+                          : "bg-amber-100 text-amber-700 hover:bg-amber-100"
                       }
                     >
                       {activity.status === "concluido" ? "Concluido" : "Pendente"}
@@ -485,7 +198,7 @@ export default function DashboardPage() {
                 {userIsGestor ? "Agenda da semana" : "Meus próximos compromissos"}
               </CardDescription>
             </div>
-            <Link 
+            <Link
               href="/dashboard/agenda"
               className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
@@ -506,7 +219,7 @@ export default function DashboardPage() {
                 {schedule.map((item: Record<string, unknown>) => {
                   const date = new Date(String(item.data_inicio))
                   const isToday = date.toDateString() === new Date().toDateString()
-                  
+
                   return (
                     <div
                       key={String(item.id)}
@@ -525,8 +238,8 @@ export default function DashboardPage() {
                           {String(item.titulo)}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          {item.tecnico_nome ? String(item.tecnico_nome) : "Sem tecnico"} 
-                          {item.cliente_nome && ` - ${String(item.cliente_nome)}`}
+                          {item.tecnico_nome ? String(item.tecnico_nome) : "Sem tecnico"}
+                          {item.cliente_nome ? ` - ${String(item.cliente_nome)}` : ""}
                         </p>
                       </div>
                       {isToday && (

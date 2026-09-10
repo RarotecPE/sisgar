@@ -16,6 +16,7 @@ export async function GET() {
         a.titulo as evento_titulo,
         a.data_inicio as evento_data,
         a.local as evento_local,
+        a.tipo as evento_tipo,
         t.nome as tecnico_nome
       FROM agenda_solicitacoes s
       LEFT JOIN agenda_trabalhista a ON s.agenda_evento_id = a.id

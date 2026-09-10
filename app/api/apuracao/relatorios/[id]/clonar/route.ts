@@ -15,7 +15,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const { id } = await params
     const body = await request.json().catch(() => ({}))
 
-    const rows = await sql`SELECT * FROM apuracao_relatorios WHERE id = ${parseInt(id)}`
+    const rows = await sql<any>`SELECT * FROM apuracao_relatorios WHERE id = ${parseInt(id)}`
     if (rows.length === 0) {
       return NextResponse.json({ error: "Relatorio nao encontrado" }, { status: 404 })
     }

@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { MessagesSquare, Plus, Search, EyeOff, Lock, User, Paperclip } from "lucide-react"
+import { MessagesSquare, Plus, Search, EyeOff, Lock, User, Paperclip, CalendarClock } from "lucide-react"
 import { OuveNovaManifestacaoDialog } from "@/components/ouve-nova-manifestacao-dialog"
 import { OuveDetalheDialog } from "@/components/ouve-detalhe-dialog"
 import { STATUS_OUVE, labelSigilo, rotuloCodigo, type OuveManifestacao } from "@/lib/ouve-rarotec"
@@ -176,20 +176,26 @@ export default function OuveRarotecPage() {
                   </Badge>
                 </div>
                 <p className="line-clamp-2 text-sm text-muted-foreground">{m.mensagem}</p>
-                <div className="mt-auto flex items-center gap-2 text-xs text-muted-foreground">
-                  {anonima ? (
-                    <>
-                      <EyeOff className="h-3.5 w-3.5" /> Anônima
-                    </>
-                  ) : semId ? (
-                    <>
-                      <Lock className="h-3.5 w-3.5" /> Sigilosa
-                    </>
-                  ) : (
-                    <>
-                      <User className="h-3.5 w-3.5" /> {m.autor_nome}
-                    </>
-                  )}
+                <div className="mt-auto flex items-center justify-between gap-2 text-xs text-muted-foreground">
+                  <span className="flex min-w-0 items-center gap-1">
+                    {anonima ? (
+                      <>
+                        <EyeOff className="h-3.5 w-3.5 shrink-0" /> Anônima
+                      </>
+                    ) : semId ? (
+                      <>
+                        <Lock className="h-3.5 w-3.5 shrink-0" /> Sigilosa
+                      </>
+                    ) : (
+                      <>
+                        <User className="h-3.5 w-3.5 shrink-0" /> <span className="truncate">{m.autor_nome}</span>
+                      </>
+                    )}
+                  </span>
+                  <span className="flex shrink-0 items-center gap-1 whitespace-nowrap">
+                    <CalendarClock className="h-3.5 w-3.5" />
+                    {new Date(m.created_at).toLocaleDateString("pt-BR")}
+                  </span>
                 </div>
               </button>
             )

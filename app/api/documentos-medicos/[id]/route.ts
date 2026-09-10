@@ -24,7 +24,7 @@ export async function PATCH(
   try {
     const body = await request.json()
 
-    const docs = await sql`SELECT * FROM documentos_medicos WHERE id = ${docId}`
+    const docs = await sql<any>`SELECT * FROM documentos_medicos WHERE id = ${docId}`
     if (docs.length === 0) {
       return NextResponse.json({ error: "Documento nao encontrado" }, { status: 404 })
     }
@@ -109,7 +109,7 @@ export async function DELETE(
   const docId = parseInt(id)
 
   try {
-    const docs = await sql`SELECT * FROM documentos_medicos WHERE id = ${docId}`
+    const docs = await sql<any>`SELECT * FROM documentos_medicos WHERE id = ${docId}`
     if (docs.length === 0) {
       return NextResponse.json({ error: "Documento nao encontrado" }, { status: 404 })
     }

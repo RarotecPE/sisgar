@@ -6,10 +6,11 @@ import {
   formatBRL,
   fileUrl,
   totalItensServico,
+  valorUnitarioItemServico,
   type ApuracaoRelatorio,
 } from "@/lib/apuracao"
-import { buildSisgarUrl } from "@/lib/app-url"
 import { generateRelatorioPDF, buildRelatorioPdfDataFromRecord } from "@/lib/pdf-generator"
+import { buildSisgarUrl } from "@/lib/app-url"
 
 const COLORS = {
   primary: [30, 83, 146] as [number, number, number],
@@ -231,9 +232,10 @@ export async function generateApuracaoPDF(data: ApuracaoPdfData): Promise<Blob> 
   }
 
   // ===== HEADER =====
-  const validationUrl = typeof window !== "undefined"
-    ? `${window.location.origin}/validar/${numeroAutenticacao}`
-    : buildSisgarUrl(`/validar/${numeroAutenticacao}`)
+  const validationUrl =
+    typeof window !== "undefined"
+      ? `${window.location.origin}/validar/${numeroAutenticacao}`
+      : buildSisgarUrl(`/validar/${numeroAutenticacao}`)
   let qrDataUrl: string | null = null
   try {
     qrDataUrl = await QRCode.toDataURL(validationUrl, {
@@ -404,31 +406,35 @@ export async function generateApuracaoPDF(data: ApuracaoPdfData): Promise<Blob> 
   if (porItem) {
     addSectionHeader("ITENS DA PRESTAÇÃO DOS SERVIÇOS")
     const headH = 9
-    const valW = 34
-    const qtyW = 20
-    const unitW = 24
-    const descW = contentWidth - valW - qtyW - unitW
+    const valW = 32 // VALOR total (R$)
+    const unitValW = 28 // VLR. UNIT. (R$)
+    const qtyW = 16 // QTD.
+    const unitW = 18 // UNID.
+    const descW = contentWidth - valW - unitValW - qtyW - unitW
     const descX = margin + 3
     const qtyCx = margin + descW + qtyW / 2
     const unitCx = margin + descW + qtyW + unitW / 2
+    // Coluna de valor unitário: alinhada à direita, com folga antes da coluna VALOR total.
+    const unitValRightX = pageWidth - margin - valW - 3
     const valX = pageWidth - margin - 3
 
     // Cabeçalho
     checkPageBreak(headH + 4)
     doc.setFillColor(...COLORS.primary)
     doc.rect(margin, yPos, contentWidth, headH, "F")
-    doc.setFontSize(8.5)
+    doc.setFontSize(8)
     doc.setFont("helvetica", "bold")
     doc.setTextColor(...COLORS.white)
     doc.text("ITEM / DESCRIÇÃO", descX, yPos + headH / 2 + 1.6)
     doc.text("QTD.", qtyCx, yPos + headH / 2 + 1.6, { align: "center" })
     doc.text("UNID.", unitCx, yPos + headH / 2 + 1.6, { align: "center" })
+    doc.text("VLR. UNIT. (R$)", unitValRightX, yPos + headH / 2 + 1.6, { align: "right" })
     doc.text("VALOR (R$)", valX, yPos + headH / 2 + 1.6, { align: "right" })
     yPos += headH
 
     doc.setFont("helvetica", "normal")
     itensServico.forEach((item, idx) => {
-      doc.setFontSize(9)
+      doc.setFontSize(8.5)
       const texto = `${idx + 1}. ${item.descricao || "-"}`
       const linhas = doc.splitTextToSize(texto, descW - 5) as string[]
       const lineH = 4.4
@@ -450,7 +456,14 @@ export async function generateApuracaoPDF(data: ApuracaoPdfData): Promise<Blob> 
       doc.text(String(item.quantidade ?? 0), qtyCx, midY, { align: "center" })
       // unidade
       doc.text(item.unidade || "-", unitCx, midY, { align: "center" })
-      // valor (apenas quando houver)
+      // valor unitário (derivado do próprio item; só quando houver valor)
+      const vUnit = valorUnitarioItemServico(item)
+      if (vUnit > 0) {
+        doc.setTextColor(...COLORS.gray)
+        doc.text(formatBRL(vUnit), unitValRightX, midY, { align: "right" })
+        doc.setTextColor(...COLORS.dark)
+      }
+      // valor total do item (apenas quando houver)
       if (Number(item.valor) > 0) {
         doc.setFont("helvetica", "bold")
         doc.text(formatBRL(item.valor), valX, midY, { align: "right" })

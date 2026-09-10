@@ -295,7 +295,14 @@ export function ApuracaoListClient() {
                         )
                       })()}
                     </TableCell>
-                    <TableCell className="text-muted-foreground">{r.modelo_nome || "-"}</TableCell>
+                    <TableCell className="w-[180px] max-w-[180px] whitespace-normal text-muted-foreground">
+                      <span
+                        className="block max-w-[180px] whitespace-normal break-words leading-5 overflow-hidden [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]"
+                        title={r.modelo_nome || "-"}
+                      >
+                        {r.modelo_nome || "-"}
+                      </span>
+                    </TableCell>
                     <TableCell>{competenciaLabel(r.competencia)}</TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1">

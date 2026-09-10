@@ -11,7 +11,7 @@ async function requireGestor() {
 }
 
 async function isTargetAdmin(id: number) {
-  const rows = await sql`SELECT cargo FROM usuarios WHERE id = ${id} LIMIT 1`
+  const rows = await sql<{ cargo: string | null }>`SELECT cargo FROM usuarios WHERE id = ${id} LIMIT 1`
   return rows[0]?.cargo?.toLowerCase() === "administrador"
 }
 
