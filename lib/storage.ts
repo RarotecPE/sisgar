@@ -1,3 +1,4 @@
+// Camada de armazenamento unificada (Cloudflare R2 / Vercel Blob / Local) - Sisgar
 import {
   S3Client,
   PutObjectCommand,

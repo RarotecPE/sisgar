@@ -205,15 +205,15 @@ export function TecnicoForm({ tecnico, onSuccess, onCancel }: TecnicoFormProps) 
       {/* Seleção de Usuário do RaroNexus para novo cadastro */}
       {!tecnico && (
         <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-primary" />
-              <Label className="font-semibold text-base text-foreground">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <Sparkles className="h-5 w-5 text-primary shrink-0" />
+              <Label className="font-semibold text-base text-foreground truncate">
                 Vincular Usuário do RaroNexus *
               </Label>
             </div>
             {selectedNexusUser && (
-              <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
+              <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 shrink-0">
                 Sincronizado
               </Badge>
             )}
@@ -229,26 +229,28 @@ export function TecnicoForm({ tecnico, onSuccess, onCancel }: TecnicoFormProps) 
                 variant="outline"
                 role="combobox"
                 aria-expanded={openNexusCombobox}
-                className="w-full justify-between bg-background"
+                className="w-full justify-between bg-background h-auto min-h-10 py-2 px-3 text-left"
                 disabled={loadingCandidatos}
               >
                 {selectedNexusUser ? (
-                  <div className="flex items-center gap-2 truncate">
-                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+                  <div className="flex items-center gap-2 min-w-0 flex-1 mr-2">
+                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
                       {selectedNexusUser.nome.charAt(0).toUpperCase()}
                     </div>
-                    <span className="font-medium">{selectedNexusUser.nome}</span>
-                    <span className="text-xs text-muted-foreground">({selectedNexusUser.email})</span>
+                    <div className="flex flex-col sm:flex-row sm:items-baseline gap-0.5 sm:gap-2 min-w-0 flex-1">
+                      <span className="font-medium truncate">{selectedNexusUser.nome}</span>
+                      <span className="text-xs text-muted-foreground truncate">({selectedNexusUser.email})</span>
+                    </div>
                   </div>
                 ) : loadingCandidatos ? (
-                  "Carregando usuários do RaroNexus..."
+                  <span className="truncate">Carregando usuários do RaroNexus...</span>
                 ) : (
-                  "Clique para selecionar um usuário do RaroNexus..."
+                  <span className="truncate">Clique para selecionar um usuário do RaroNexus...</span>
                 )}
                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+            <PopoverContent className="w-[var(--radix-popover-trigger-width)] max-w-[calc(100vw-2rem)] p-0" align="start">
               <Command>
                 <CommandInput placeholder="Buscar por nome ou e-mail..." />
                 <CommandList>
@@ -262,16 +264,16 @@ export function TecnicoForm({ tecnico, onSuccess, onCancel }: TecnicoFormProps) 
                           handleSelectNexusUser(cand)
                           setOpenNexusCombobox(false)
                         }}
-                        className="flex items-center justify-between py-2 cursor-pointer"
+                        className="flex items-center justify-between py-2 cursor-pointer gap-2"
                       >
-                        <div className="flex items-center gap-2 truncate">
+                        <div className="flex items-center gap-2 min-w-0 flex-1 mr-2">
                           <Check
                             className={cn(
                               "h-4 w-4 shrink-0",
                               selectedNexusUser?.nexus_id === cand.nexus_id ? "opacity-100" : "opacity-0"
                             )}
                           />
-                          <div className="flex flex-col truncate">
+                          <div className="flex flex-col min-w-0 flex-1">
                             <span className="font-medium truncate">{cand.nome}</span>
                             <span className="text-xs text-muted-foreground truncate">{cand.email}</span>
                           </div>
@@ -297,7 +299,7 @@ export function TecnicoForm({ tecnico, onSuccess, onCancel }: TecnicoFormProps) 
 
           {selectedNexusUser && (
             <div className="rounded-lg border bg-background/80 p-3 flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold text-sm">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold text-sm">
                 {selectedNexusUser.nome.charAt(0).toUpperCase()}
               </div>
               <div className="flex-1 min-w-0">
@@ -321,7 +323,7 @@ export function TecnicoForm({ tecnico, onSuccess, onCancel }: TecnicoFormProps) 
         </h3>
         
         <div className="grid gap-4 sm:grid-cols-2">
-          <div className="sm:col-span-2">
+          <div className="sm:col-span-2 min-w-0">
             <Label htmlFor="nome">Nome Completo *</Label>
             <Input
               id="nome"
@@ -332,7 +334,7 @@ export function TecnicoForm({ tecnico, onSuccess, onCancel }: TecnicoFormProps) 
             />
           </div>
 
-          <div>
+          <div className="min-w-0">
             <Label htmlFor="cpf">CPF</Label>
             <MaskedInput
               mask="cpf"
@@ -344,7 +346,7 @@ export function TecnicoForm({ tecnico, onSuccess, onCancel }: TecnicoFormProps) 
             />
           </div>
 
-          <div>
+          <div className="min-w-0">
             <Label htmlFor="rg">RG</Label>
             <Input
               id="rg"
@@ -354,7 +356,7 @@ export function TecnicoForm({ tecnico, onSuccess, onCancel }: TecnicoFormProps) 
             />
           </div>
 
-          <div>
+          <div className="min-w-0">
             <Label htmlFor="data_nascimento">Data de Nascimento</Label>
             <Input
               id="data_nascimento"
@@ -365,7 +367,7 @@ export function TecnicoForm({ tecnico, onSuccess, onCancel }: TecnicoFormProps) 
             />
           </div>
 
-          <div>
+          <div className="min-w-0">
             <Label htmlFor="email">E-mail</Label>
             <Input
               id="email"
@@ -376,7 +378,31 @@ export function TecnicoForm({ tecnico, onSuccess, onCancel }: TecnicoFormProps) 
             />
           </div>
 
-          <div>
+          <div className="min-w-0">
+            <Label htmlFor="telefone">Telefone</Label>
+            <MaskedInput
+              mask="telefone"
+              id="telefone"
+              value={formData.telefone}
+              onChange={(value) => setFormData({ ...formData, telefone: value })}
+              placeholder="(00) 0000-0000"
+              className="mt-1.5"
+            />
+          </div>
+
+          <div className="min-w-0">
+            <Label htmlFor="celular">Celular/WhatsApp</Label>
+            <MaskedInput
+              mask="celular"
+              id="celular"
+              value={formData.celular}
+              onChange={(value) => setFormData({ ...formData, celular: value })}
+              placeholder="(00) 00000-0000"
+              className="mt-1.5"
+            />
+          </div>
+
+          <div className="sm:col-span-2 min-w-0">
             <Label htmlFor="nexus_email">E-mail do Nexus</Label>
             <Input
               id="nexus_email"
@@ -390,30 +416,6 @@ export function TecnicoForm({ tecnico, onSuccess, onCancel }: TecnicoFormProps) 
               Se ficar vazio, o Sisgar usa o e-mail local para vincular com o RaroNexus.
             </p>
           </div>
-
-          <div>
-            <Label htmlFor="telefone">Telefone</Label>
-            <MaskedInput
-              mask="telefone"
-              id="telefone"
-              value={formData.telefone}
-              onChange={(value) => setFormData({ ...formData, telefone: value })}
-              placeholder="(00) 0000-0000"
-              className="mt-1.5"
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="celular">Celular/WhatsApp</Label>
-            <MaskedInput
-              mask="celular"
-              id="celular"
-              value={formData.celular}
-              onChange={(value) => setFormData({ ...formData, celular: value })}
-              placeholder="(00) 00000-0000"
-              className="mt-1.5"
-            />
-          </div>
         </div>
       </div>
 
@@ -424,7 +426,7 @@ export function TecnicoForm({ tecnico, onSuccess, onCancel }: TecnicoFormProps) 
         </h3>
         
         <div className="grid gap-4 sm:grid-cols-2">
-          <div className="sm:col-span-2">
+          <div className="sm:col-span-2 min-w-0">
             <Label htmlFor="endereco">Endereco Completo</Label>
             <Input
               id="endereco"
@@ -434,7 +436,7 @@ export function TecnicoForm({ tecnico, onSuccess, onCancel }: TecnicoFormProps) 
             />
           </div>
 
-          <div>
+          <div className="min-w-0">
             <Label htmlFor="cidade">Cidade</Label>
             <Input
               id="cidade"
@@ -444,7 +446,7 @@ export function TecnicoForm({ tecnico, onSuccess, onCancel }: TecnicoFormProps) 
             />
           </div>
 
-          <div>
+          <div className="min-w-0">
             <Label htmlFor="estado">Estado</Label>
             <Select
               value={formData.estado}
@@ -463,7 +465,7 @@ export function TecnicoForm({ tecnico, onSuccess, onCancel }: TecnicoFormProps) 
             </Select>
           </div>
 
-          <div>
+          <div className="min-w-0">
             <Label htmlFor="cep">CEP</Label>
             <MaskedInput
               mask="cep"
@@ -484,7 +486,7 @@ export function TecnicoForm({ tecnico, onSuccess, onCancel }: TecnicoFormProps) 
         </h3>
         
         <div className="grid gap-4 sm:grid-cols-2">
-          <div>
+          <div className="min-w-0">
             <Label>Cargo(s)</Label>
             <Popover open={openCargo} onOpenChange={setOpenCargo}>
               <PopoverTrigger asChild>
@@ -494,7 +496,7 @@ export function TecnicoForm({ tecnico, onSuccess, onCancel }: TecnicoFormProps) 
                   aria-expanded={openCargo}
                   className="w-full justify-between mt-1.5 font-normal h-auto min-h-10"
                 >
-                  <span className="text-muted-foreground">
+                  <span className="text-muted-foreground truncate">
                     {formData.cargos.length === 0
                       ? "Selecione o(s) cargo(s)"
                       : `${formData.cargos.length} cargo(s) selecionado(s)`}
@@ -554,7 +556,7 @@ export function TecnicoForm({ tecnico, onSuccess, onCancel }: TecnicoFormProps) 
             )}
           </div>
 
-          <div>
+          <div className="min-w-0">
             <Label htmlFor="data_admissao">Data de Admissao</Label>
             <Input
               id="data_admissao"
@@ -565,7 +567,7 @@ export function TecnicoForm({ tecnico, onSuccess, onCancel }: TecnicoFormProps) 
             />
           </div>
 
-          <div className="sm:col-span-2">
+          <div className="sm:col-span-2 min-w-0">
             <Label>Setor/Departamento</Label>
             <Popover open={openDepartamento} onOpenChange={setOpenDepartamento}>
               <PopoverTrigger asChild>
