@@ -33,57 +33,84 @@ import { STATUS_OUVE } from "@/lib/ouve-rarotec"
 const fetcher = (url: string) => fetch(url).then((r) => r.json())
 
 // Paleta por tom — strings literais completas para o JIT do Tailwind detectar.
-// chip/ring/count: cores do ícone, anel e número. border/base: estado estático.
-// flash: overlay que pisca (opacity). halo: RGB do anel pulsante (via var --halo).
+// chip/ring/count: cores do ícone, anel e número. border/base: borda e cor de fundo sólida.
 type ToneDef = {
   chip: string
   ring: string
   count: string
   border: string
   base: string
-  flash: string
-  halo: string
 }
 const TONE: Record<string, ToneDef> = {
   red: {
-    chip: "bg-red-100 text-red-700", ring: "ring-red-400", count: "text-red-700",
-    border: "border-red-300", base: "bg-card", flash: "bg-red-300/80", halo: "239 68 68",
+    chip: "bg-red-100 text-red-700 dark:bg-red-950/60 dark:text-red-300",
+    ring: "ring-red-400",
+    count: "text-red-700 dark:text-red-300",
+    border: "border-red-300 dark:border-red-800",
+    base: "bg-red-50/60 dark:bg-red-950/30",
   },
   amber: {
-    chip: "bg-amber-100 text-amber-700", ring: "ring-amber-400", count: "text-amber-700",
-    border: "border-amber-300", base: "bg-card", flash: "bg-amber-300/80", halo: "245 158 11",
+    chip: "bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300",
+    ring: "ring-amber-400",
+    count: "text-amber-700 dark:text-amber-300",
+    border: "border-amber-300 dark:border-amber-800",
+    base: "bg-amber-50/60 dark:bg-amber-950/30",
   },
   orange: {
-    chip: "bg-orange-100 text-orange-700", ring: "ring-orange-400", count: "text-orange-700",
-    border: "border-orange-300", base: "bg-card", flash: "bg-orange-300/80", halo: "249 115 22",
+    chip: "bg-orange-100 text-orange-700 dark:bg-orange-950/60 dark:text-orange-300",
+    ring: "ring-orange-400",
+    count: "text-orange-700 dark:text-orange-300",
+    border: "border-orange-300 dark:border-orange-800",
+    base: "bg-orange-50/60 dark:bg-orange-950/30",
   },
   sky: {
-    chip: "bg-sky-100 text-sky-700", ring: "ring-sky-400", count: "text-sky-700",
-    border: "border-sky-300", base: "bg-card", flash: "bg-sky-300/80", halo: "14 165 233",
+    chip: "bg-sky-100 text-sky-700 dark:bg-sky-950/60 dark:text-sky-300",
+    ring: "ring-sky-400",
+    count: "text-sky-700 dark:text-sky-300",
+    border: "border-sky-300 dark:border-sky-800",
+    base: "bg-sky-50/60 dark:bg-sky-950/30",
   },
   rose: {
-    chip: "bg-rose-100 text-rose-700", ring: "ring-rose-400", count: "text-rose-700",
-    border: "border-rose-300", base: "bg-card", flash: "bg-rose-300/80", halo: "244 63 94",
+    chip: "bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300",
+    ring: "ring-rose-400",
+    count: "text-rose-700 dark:text-rose-300",
+    border: "border-rose-300 dark:border-rose-800",
+    base: "bg-rose-50/60 dark:bg-rose-950/30",
   },
   indigo: {
-    chip: "bg-indigo-100 text-indigo-700", ring: "ring-indigo-400", count: "text-indigo-700",
-    border: "border-indigo-300", base: "bg-card", flash: "bg-indigo-300/80", halo: "99 102 241",
+    chip: "bg-indigo-100 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300",
+    ring: "ring-indigo-400",
+    count: "text-indigo-700 dark:text-indigo-300",
+    border: "border-indigo-300 dark:border-indigo-800",
+    base: "bg-indigo-50/60 dark:bg-indigo-950/30",
   },
   pink: {
-    chip: "bg-pink-100 text-pink-700", ring: "ring-pink-400", count: "text-pink-700",
-    border: "border-pink-300", base: "bg-card", flash: "bg-pink-300/80", halo: "236 72 153",
+    chip: "bg-pink-100 text-pink-700 dark:bg-pink-950/60 dark:text-pink-300",
+    ring: "ring-pink-400",
+    count: "text-pink-700 dark:text-pink-300",
+    border: "border-pink-300 dark:border-pink-800",
+    base: "bg-pink-50/60 dark:bg-pink-950/30",
   },
   teal: {
-    chip: "bg-teal-100 text-teal-700", ring: "ring-teal-400", count: "text-teal-700",
-    border: "border-teal-300", base: "bg-card", flash: "bg-teal-300/80", halo: "20 184 166",
+    chip: "bg-teal-100 text-teal-700 dark:bg-teal-950/60 dark:text-teal-300",
+    ring: "ring-teal-400",
+    count: "text-teal-700 dark:text-teal-300",
+    border: "border-teal-300 dark:border-teal-800",
+    base: "bg-teal-50/60 dark:bg-teal-950/30",
   },
   blue: {
-    chip: "bg-blue-100 text-blue-700", ring: "ring-blue-400", count: "text-blue-700",
-    border: "border-blue-300", base: "bg-card", flash: "bg-blue-300/80", halo: "59 130 246",
+    chip: "bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300",
+    ring: "ring-blue-400",
+    count: "text-blue-700 dark:text-blue-300",
+    border: "border-blue-300 dark:border-blue-800",
+    base: "bg-blue-50/60 dark:bg-blue-950/30",
   },
   violet: {
-    chip: "bg-violet-100 text-violet-700", ring: "ring-violet-400", count: "text-violet-700",
-    border: "border-violet-300", base: "bg-card", flash: "bg-violet-300/80", halo: "139 92 246",
+    chip: "bg-violet-100 text-violet-700 dark:bg-violet-950/60 dark:text-violet-300",
+    ring: "ring-violet-400",
+    count: "text-violet-700 dark:text-violet-300",
+    border: "border-violet-300 dark:border-violet-800",
+    base: "bg-violet-50/60 dark:bg-violet-950/30",
   },
 }
 
@@ -524,15 +551,15 @@ export function CentralAvisos() {
           <div className="flex items-center gap-2">
             <div
               className={`flex h-8 w-8 items-center justify-center rounded-lg ${
-                temUrgente ? "bg-red-100" : "bg-primary/10"
+                temUrgente ? "bg-red-100 dark:bg-red-950/50" : "bg-primary/10"
               }`}
             >
-              <BellRing className={`aviso-sino h-4 w-4 ${temUrgente ? "text-red-600" : "text-primary"}`} />
+              <BellRing className={`h-4 w-4 ${temUrgente ? "text-red-600 dark:text-red-400" : "text-primary"}`} />
             </div>
             <h2 className="font-semibold">Central de avisos</h2>
             <Badge
               variant={temUrgente ? "destructive" : "secondary"}
-              className={`tabular-nums ${temUrgente ? "aviso-badge" : ""}`}
+              className="tabular-nums"
             >
               {totalGeral}
             </Badge>
@@ -556,17 +583,10 @@ export function CentralAvisos() {
                 type="button"
                 onClick={() => setAberto(ativo ? null : g.chave)}
                 aria-expanded={ativo}
-                style={ativo ? undefined : ({ "--halo": tom.halo } as React.CSSProperties)}
-                className={`relative flex flex-col gap-3 rounded-xl border p-3 text-left transition-all hover:shadow-md ${
-                  ativo ? `bg-card ring-2 ${tom.ring}` : `aviso-halo ${tom.border} ${tom.base}`
+                className={`relative flex flex-col gap-3 rounded-xl border p-3 text-left transition-all hover:shadow-md ${tom.border} ${tom.base} ${
+                  ativo ? `ring-2 ${tom.ring} shadow-sm` : ""
                 }`}
               >
-                {!ativo && (
-                  <span
-                    aria-hidden
-                    className={`aviso-flash pointer-events-none absolute inset-0 rounded-[inherit] ${tom.flash}`}
-                  />
-                )}
                 <div className="relative flex items-start justify-between">
                   <span className={`flex h-8 w-8 items-center justify-center rounded-lg ${tom.chip}`}>
                     <Icon className="h-4 w-4" />

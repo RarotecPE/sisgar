@@ -22,9 +22,12 @@ export const metadata: Metadata = {
   description: 'Sistema de Gestao Administrativa da Rarotec',
   generator: 'v0.app',
   icons: {
-    icon: [{ url: '/icon-light-32x32.png?v=2', type: 'image/png', sizes: '32x32' }],
-    shortcut: '/icon-light-32x32.png?v=2',
-    apple: '/apple-icon.png?v=2',
+    icon: [
+      { url: '/favicon.png?v=5', type: 'image/png' },
+      { url: '/icon-light-32x32.png?v=5', type: 'image/png', sizes: '32x32' },
+    ],
+    shortcut: '/favicon.png?v=5',
+    apple: '/apple-icon.png?v=5',
   },
 }
 
