@@ -1,7 +1,6 @@
 import { sql } from "@/lib/db"
 import { NextRequest, NextResponse } from "next/server"
-import { put } from "@vercel/blob"
-
+import { putStorageFile } from "@/lib/storage"
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,9 +15,10 @@ export async function POST(request: NextRequest) {
     const anexosSalvos = []
 
     for (const file of files) {
-      // Upload para Vercel Blob (private access)
-      const blob = await put(`relatorios/${relatorioId}/${file.name}`, file, {
-        access: "private",
+      const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_")
+      const pathname = `relatorios/${relatorioId}/${Date.now()}-${safeName}`
+      const stored = await putStorageFile(pathname, file, {
+        contentType: file.type || undefined,
       })
 
       // Salvar referencia no banco
@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
           ${parseInt(relatorioId)},
           ${file.name},
           ${file.type},
-          ${blob.url},
+          ${stored.pathname},
           ${file.size}
         )
         RETURNING *

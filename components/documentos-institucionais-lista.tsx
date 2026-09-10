@@ -1,9 +1,18 @@
 "use client"
 
 import { useState } from "react"
-import { format } from "date-fns"
-import { ptBR } from "date-fns/locale"
 import { type DocumentoInstitucional } from "@/lib/documentos-institucionais"
+
+// A data do documento e "date-only" (ex.: 2026-08-25). Formatamos direto da string
+// (dd/MM/yyyy) sem usar `new Date`, que interpretaria o valor como meia-noite UTC e,
+// no fuso local (UTC-3), exibiria o dia anterior (24/08 no lugar de 25/08).
+function formatarDataDocumento(valor: string): string {
+  const iso = String(valor).slice(0, 10) // cobre "2026-08-25" e "2026-08-25T00:00:00.000Z"
+  const partes = iso.split("-")
+  if (partes.length !== 3) return String(valor)
+  const [ano, mes, dia] = partes
+  return `${dia}/${mes}/${ano}`
+}
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -99,7 +108,7 @@ export function DocumentosLista({
                 )}
                 <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                   {doc.data_documento && (
-                    <span>{format(new Date(doc.data_documento), "dd/MM/yyyy", { locale: ptBR })}</span>
+                    <span>{formatarDataDocumento(doc.data_documento)}</span>
                   )}
                   {mostrarSetor && doc.setor && (
                     <Badge variant="secondary" className="font-normal">{doc.setor}</Badge>

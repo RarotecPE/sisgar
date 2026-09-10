@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Download, Loader2, Send, User, Lock, EyeOff, Paperclip } from "lucide-react"
+import { Download, Loader2, Send, User, Lock, EyeOff, Paperclip, CalendarClock } from "lucide-react"
 import { STATUS_OUVE, labelSigilo, rotuloCodigo, type OuveManifestacao } from "@/lib/ouve-rarotec"
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json())
@@ -101,6 +101,12 @@ export function OuveDetalheDialog({ manifestacaoId, open, onOpenChange, isGestor
               <Badge variant="outline">{data.tipo_vida}</Badge>
               {data.setor && <Badge variant="outline">{data.setor}</Badge>}
             </div>
+
+            {/* Data de registro */}
+            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <CalendarClock className="h-3.5 w-3.5" />
+              Registrada em {new Date(data.created_at).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
+            </p>
 
             {/* Identificacao */}
             <div className="rounded-lg border p-3 text-sm">

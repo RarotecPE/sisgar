@@ -74,7 +74,7 @@ export async function GET(
     // Processar orgao_atendido para buscar nomes corretos pelo CNPJ
     let orgaosProcessados = relatorio.orgao_atendido
     if (relatorio.orgao_atendido) {
-      const partes = relatorio.orgao_atendido.split("; ")
+      const partes = String(relatorio.orgao_atendido).split("; ")
       const partesProcessadas = await Promise.all(partes.map(async (parte: string) => {
         const match = parte.match(/^(.+?) \(CNPJ: (.+?)\)$/)
         if (match) {

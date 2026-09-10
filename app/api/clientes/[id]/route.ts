@@ -1,4 +1,5 @@
 import { sql } from "@/lib/db"
+import { neon } from "@neondatabase/serverless"
 import { NextRequest, NextResponse } from "next/server"
 
 
@@ -67,7 +68,45 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params
-    await sql`DELETE FROM clientes WHERE id = ${id}`
+    const clienteId = Number(id)
+
+    // Regra de negocio: clientes que ja foram utilizados no sistema NAO podem ser
+    // excluidos, apenas inativados. Detectamos dinamicamente todas as tabelas que
+    // referenciam `cliente_id` e verificamos se ha algum registro vinculado.
+    const rawSql = neon(process.env.DATABASE_URL!)
+    const tabelas = (await rawSql.query(
+      `SELECT c.table_name
+       FROM information_schema.columns c
+       JOIN information_schema.tables t
+         ON t.table_name = c.table_name AND t.table_schema = c.table_schema
+       WHERE c.column_name = 'cliente_id'
+         AND c.table_schema = 'public'
+         AND t.table_type = 'BASE TABLE'`
+    )) as { table_name: string }[]
+
+    const tabelasComVinculo: string[] = []
+    for (const { table_name } of tabelas) {
+      // table_name vem do catalogo do banco (nao e entrada do usuario); seguro como identificador.
+      const rows = (await rawSql.query(
+        `SELECT 1 FROM "${table_name}" WHERE cliente_id = $1 LIMIT 1`,
+        [clienteId]
+      )) as unknown[]
+      if (rows.length > 0) tabelasComVinculo.push(table_name)
+    }
+
+    if (tabelasComVinculo.length > 0) {
+      return NextResponse.json(
+        {
+          error: "cliente_em_uso",
+          message:
+            "Este cliente ja foi utilizado no sistema e nao pode ser excluido. Ele pode apenas ser inativado.",
+          tabelas: tabelasComVinculo,
+        },
+        { status: 409 }
+      )
+    }
+
+    await sql`DELETE FROM clientes WHERE id = ${clienteId}`
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error("Erro ao excluir cliente:", error)

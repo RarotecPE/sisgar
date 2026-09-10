@@ -531,7 +531,7 @@ export default function PlanejamentoSemanalPage() {
         const item = itens[0]
         const clienteId = 'cliente_id' in item ? item.cliente_id : ('clienteId' in item ? item.clienteId : null)
         const municipio = 'local' in item ? item.local : ('municipio' in item ? item.municipio : "")
-        copiarCartao({ tipo: item.tipo || "visita", clienteId, municipio })
+        copiarCartao({ tipo: item.tipo || "visita", clienteId, municipio: municipio || undefined })
         return true
       }
     }
@@ -561,11 +561,12 @@ export default function PlanejamentoSemanalPage() {
   const removeAgendamento = (item: Evento | CelulaAgendamento) => {
     if ('id' in item && item.id && !('isNew' in item)) {
       // Evento existente - marca para deletar
+      const ev = item as Evento
       setPendingChanges(prev => [...prev, { 
-        id: item.id, 
-        tecnicoId: item.tecnico_rarotec_id!, 
-        data: item.data_inicio.split("T")[0],
-        tipo: item.tipo || "visita",
+        id: ev.id, 
+        tecnicoId: ev.tecnico_rarotec_id!, 
+        data: ev.data_inicio.split("T")[0],
+        tipo: ev.tipo || "visita",
         isDeleted: true 
       }])
     } else if ('isNew' in item && item.isNew) {
@@ -794,13 +795,13 @@ export default function PlanejamentoSemanalPage() {
       <Card>
         <CardContent className="p-4">
           {/* Linha 1: Navegação da semana */}
-          <div className="flex items-center justify-between gap-4 mb-3">
-            <div className="flex items-center gap-2">
+          <div className="mb-3 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex min-w-0 w-full items-center justify-center gap-2 sm:flex-1 sm:justify-start">
               <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setSemanaAtual(subWeeks(semanaAtual, 1))}>
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              <div className="text-center min-w-44">
-                <div className="font-semibold text-sm">
+              <div className="min-w-0 flex-1 text-center sm:flex-none sm:min-w-44">
+                <div className="text-balance font-semibold text-sm">
                   {format(diasDaSemana[0], "dd 'de' MMMM", { locale: ptBR })} - {format(diasDaSemana[6], "dd 'de' MMMM", { locale: ptBR })}
                 </div>
                 <div className="text-xs text-muted-foreground">
@@ -816,7 +817,7 @@ export default function PlanejamentoSemanalPage() {
             </div>
             
             {/* Botões de ação à direita */}
-            <div className="flex items-center gap-2">
+            <div className="flex w-full flex-wrap items-center justify-center gap-2 sm:w-auto sm:justify-end">
               <Sheet>
                 <SheetTrigger asChild>
                   <Button variant="outline" size="sm" className="h-8">
@@ -1510,7 +1511,7 @@ function CelulaItem({
               size="sm"
               variant="outline"
               onClick={() => {
-                onCopy({ tipo, clienteId, municipio })
+                onCopy({ tipo, clienteId, municipio: municipio || undefined })
                 setIsOpen(false)
               }}
             >

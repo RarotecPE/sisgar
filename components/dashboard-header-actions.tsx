@@ -195,8 +195,7 @@ function AccountMenu({ user }: { user: HeaderUser }) {
       method: "POST",
       headers: { Accept: "application/json" },
     }).catch(() => null)
-    router.replace("/login")
-    router.refresh()
+    window.location.href = "/login"
   }
 
   return (

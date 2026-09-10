@@ -1008,8 +1008,11 @@ export default function AgendaPage() {
                         {format(dia, "d")}
                       </div>
                       {eventosDia.length > 0 && (
-                        <div className="text-xs text-muted-foreground text-center mt-2">
-                          {eventosDia.length} {eventosDia.length === 1 ? 'evento' : 'eventos'}
+                        <div className="mt-2 min-w-0 break-words text-center text-[10px] leading-tight text-muted-foreground sm:text-xs">
+                          <span className="sm:hidden">{eventosDia.length}</span>
+                          <span className="hidden sm:inline">{eventosDia.length} </span>
+                          <span className="sm:hidden">{eventosDia.length === 1 ? " evento" : " eventos"}</span>
+                          <span className="hidden sm:inline">{eventosDia.length === 1 ? "evento" : "eventos"}</span>
                         </div>
                       )}
                     </div>

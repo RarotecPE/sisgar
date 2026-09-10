@@ -110,10 +110,9 @@ export async function syncAuthorizedNexusUsers(): Promise<void> {
       continue
     }
 
-    const senhaHash = `raronexus:${crypto.randomUUID()}`
     await sql`
-      INSERT INTO usuarios (nexus_user_id, nexus_email, nome, email, senha_hash, cargo, ativo, apuracao_mensal)
-      VALUES (${nexusUserId}::uuid, ${email}, ${nome}, ${email}, ${senhaHash}, ${cargo}, true, false)
+      INSERT INTO usuarios (nexus_user_id, nexus_email, nome, email, cargo, ativo, apuracao_mensal)
+      VALUES (${nexusUserId}::uuid, ${email}, ${nome}, ${email}, ${cargo}, true, false)
     `
   }
 

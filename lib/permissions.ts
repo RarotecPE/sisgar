@@ -1,55 +1,67 @@
-// Sistema de permissões baseado em papéis do Sisgar.
-// O perfil principal vem do RaroNexus; permissões complementares seguem a lógica local.
+// Sistema de Permissões baseado em papéis
+// Gestores identificados por nome: Diretores (Ronaldson, Rafaelle), Gerente (Alan), Coordenadores (Juan, Michaelly)
+// Administradores têm acesso total
 
-export type UserRole = "admin" | "diretor" | "gerente" | "coordenador" | "tecnico"
+export type UserRole = 'admin' | 'diretor' | 'gerente' | 'coordenador' | 'tecnico'
 
-const DIRETORES = ["ronaldson", "rafaelle"]
-const GERENTES = ["alan"]
-const COORDENADORES = ["juan", "michaelly"]
+// Nomes dos gestores (lowercase para comparação)
+const DIRETORES = ['ronaldson', 'rafaelle']
+const GERENTES = ['alan']
+const COORDENADORES = ['juan', 'michaelly']
 
-function normalize(value: string) {
-  return value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
+function normalize(str: string): string {
+  return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim()
 }
 
+// Determina o papel do usuário baseado no nome e cargo
 export function getUserRole(userName: string, cargo?: string | null): UserRole {
+  // Administradores têm acesso total
   const cargoLower = normalize(cargo || "")
-
   if (cargoLower === "administrador" || cargoLower === "admin") return "admin"
+  
+  // Verificar por cargo primeiro
   if (cargoLower.includes("diretor")) return "diretor"
-  if (cargoLower.includes("gerente")) return "gerente"
-  if (cargoLower.includes("coordenacao") || cargoLower.includes("coordenador")) return "coordenador"
-
-  const nome = normalize(userName).trim()
-  if (DIRETORES.some((item) => nome.includes(item))) return "diretor"
-  if (GERENTES.some((item) => nome.includes(item))) return "gerente"
-  if (COORDENADORES.some((item) => nome.includes(item))) return "coordenador"
-
+  if (cargoLower.includes("gerente") || cargoLower.includes("coordenacao")) return "gerente"
+  if (cargoLower.includes("coordenador")) return "coordenador"
+  
+  const nome = normalize(userName)
+  
+  // Verifica se o nome contém algum dos nomes de gestores
+  if (DIRETORES.some(d => nome.includes(d))) return "diretor"
+  if (GERENTES.some(g => nome.includes(g))) return "gerente"
+  if (COORDENADORES.some(c => nome.includes(c))) return "coordenador"
+  
   return "tecnico"
 }
 
+// Verifica se o usuário é gestor (admin, diretor, gerente ou coordenador)
 export function isGestor(userName: string, cargo?: string | null): boolean {
   const role = getUserRole(userName, cargo)
   return role === "admin" || role === "diretor" || role === "gerente" || role === "coordenador"
 }
 
+// Verifica se o usuário é diretor
 export function isDiretor(userName: string, cargo?: string | null): boolean {
   const role = getUserRole(userName, cargo)
   return role === "admin" || role === "diretor"
 }
 
+// Verifica se o usuário é administrador
 export function isAdmin(cargo?: string | null): boolean {
   const cargoLower = normalize(cargo || "")
   return cargoLower === "administrador" || cargoLower === "admin"
 }
 
+// Acesso a Apuração Mensal / Modelos de Apuração.
+// Liberado apenas para usuários com o flag habilitado no cadastro
+// (Administração > Usuários) ou para administradores (sempre liberados).
 export function canApuracaoMensal(cargo?: string | null, apuracaoMensal?: boolean): boolean {
   return isAdmin(cargo) || !!apuracaoMensal
 }
 
+// Permissões específicas por funcionalidade
 export const permissions = {
+  // Cadastros
   cadastros: {
     clientes: {
       visualizar: () => true,
@@ -64,6 +76,8 @@ export const permissions = {
       gerenciar: (userName: string) => isGestor(userName),
     },
   },
+  
+  // Agenda
   agenda: {
     visualizar: () => true,
     gerenciarTodos: (userName: string) => isGestor(userName),
@@ -71,6 +85,8 @@ export const permissions = {
     solicitarAlteracao: () => true,
     aprovarSolicitacao: (userName: string) => isGestor(userName),
   },
+  
+  // Relatórios
   relatorios: {
     novoRelatorio: () => true,
     historico: {
@@ -79,6 +95,8 @@ export const permissions = {
     },
     batimento: (userName: string) => isGestor(userName),
   },
+  
+  // Administração
   admin: {
     usuarios: (userName: string) => isGestor(userName),
     configuracoes: {
@@ -88,6 +106,7 @@ export const permissions = {
   },
 }
 
+// Helper para verificar permissão
 export function hasPermission(
   userName: string,
   permission: (userName: string) => boolean
@@ -95,37 +114,66 @@ export function hasPermission(
   return permission(userName)
 }
 
+// Itens do menu baseados em permissões
 export function getMenuItems(userName: string, cargo?: string | null, apuracaoMensal?: boolean) {
   const isUserGestor = isGestor(userName, cargo)
   const podeApuracao = canApuracaoMensal(cargo, apuracaoMensal)
-
+  
   return {
+    // Cadastros
     showClientes: true,
     showTecnicosClientes: true,
     showTecnicosRarotec: isUserGestor,
+    
+    // Agenda
     showAgenda: true,
     showPlanejamento: isUserGestor,
+    
+    // Relatórios
     showNovoRelatorio: true,
     showHistorico: true,
     showBatimento: isUserGestor,
     showApuracao: podeApuracao,
     showApuracaoModelos: podeApuracao,
-    showDocumentosMedicos: true,
+
+    // Gestão de responsáveis e produtividade
+    showResponsabilidades: isUserGestor,
+    showChecklists: true,
+    showProdutividade: isUserGestor,
+    
+    // Documentos Médicos
+    showDocumentosMedicos: true, // técnico vê os próprios; gestor vê de todos
     showBatimentoMedico: isUserGestor,
+    
+    // Documentos Institucionais (acesso fino aplicado no servidor)
     showDocumentosInstitucionais: true,
     showAtas: true,
+    // Visivel a todos os logados; criar/excluir e restrito a gestores (via isGestor).
+    showCapacitacaoTutoriais: true,
+    
+    // OuveRarotec (visivel quando o modulo estiver ativo; gate no cliente/servidor)
     showOuveRarotec: true,
+    
+    // Admin
     showUsuarios: isUserGestor,
     showConfiguracoes: true,
   }
 }
 
+// Verifica se pode editar agenda de outro usuário
 export function canEditAgenda(userName: string, agendaTecnicoId: number, userTecnicoId: number, cargo?: string | null): boolean {
+  // Gestores podem editar qualquer agenda
   if (isGestor(userName, cargo)) return true
+  
+  // Técnicos só podem editar/solicitar alteração na própria agenda
   return agendaTecnicoId === userTecnicoId
 }
 
+// Verifica se pode ver relatório
 export function canViewRelatorio(userName: string, relatorioTecnicoIds: number[], userTecnicoId: number, cargo?: string | null): boolean {
+  // Gestores podem ver todos
   if (isGestor(userName, cargo)) return true
+  
+  // Técnicos só veem relatórios onde estão vinculados
   return relatorioTecnicoIds.includes(userTecnicoId)
 }

@@ -1,5 +1,6 @@
 import { sql } from "@/lib/db"
 import { NextRequest, NextResponse } from "next/server"
+import { limparConsumoAuto, limparConsumoAutoModulos } from "@/lib/apuracao"
 
 // GET /api/apuracao/modelos/[id]
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -53,10 +54,17 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
         numero_contrato_texto = CASE WHEN ${has("numero_contrato_texto")} THEN ${d.numero_contrato_texto ?? null} ELSE numero_contrato_texto END,
         destinatario_nome = CASE WHEN ${has("destinatario_nome")} THEN ${d.destinatario_nome ?? null} ELSE destinatario_nome END,
         destinatario_cargo = CASE WHEN ${has("destinatario_cargo")} THEN ${d.destinatario_cargo ?? null} ELSE destinatario_cargo END,
-        itens = CASE WHEN ${has("itens")} THEN ${JSON.stringify(d.itens ?? [])}::jsonb ELSE itens END,
-        itens_servico = CASE WHEN ${has("itens_servico")} THEN ${JSON.stringify(d.itens_servico ?? [])}::jsonb ELSE itens_servico END,
+        itens = CASE WHEN ${has("itens")} THEN ${JSON.stringify(limparConsumoAutoModulos(d.itens ?? []))}::jsonb ELSE itens END,
+        itens_servico = CASE WHEN ${has("itens_servico")} THEN ${JSON.stringify(limparConsumoAuto(d.itens_servico ?? []))}::jsonb ELSE itens_servico END,
         modo_valor = CASE WHEN ${has("modo_valor")} THEN ${d.modo_valor ?? null} ELSE modo_valor END,
         valor_global = CASE WHEN ${has("valor_global")} THEN ${d.valor_global ?? null} ELSE valor_global END,
+        meses_contrato = CASE WHEN ${has("meses_contrato")} THEN ${d.meses_contrato ?? 12} ELSE meses_contrato END,
+        valor_total_contrato = CASE WHEN ${has("valor_total_contrato")} THEN ${d.valor_total_contrato ?? null} ELSE valor_total_contrato END,
+        controle_consumo = CASE WHEN ${has("controle_consumo")} THEN ${d.controle_consumo ?? false} ELSE controle_consumo END,
+        valor_consumido_inicial = CASE WHEN ${has("valor_consumido_inicial")} THEN ${d.valor_consumido_inicial ?? null} ELSE valor_consumido_inicial END,
+        meses_consumidos_inicial = CASE WHEN ${has("meses_consumidos_inicial")} THEN ${d.meses_consumidos_inicial ?? null} ELSE meses_consumidos_inicial END,
+        reinicio_competencia = CASE WHEN ${has("reinicio_competencia")} THEN ${d.reinicio_competencia || null} ELSE reinicio_competencia END,
+        reinicio_em = CASE WHEN ${has("reinicio_em")} THEN ${d.reinicio_em || null} ELSE reinicio_em END,
         texto_padrao = CASE WHEN ${has("texto_padrao")} THEN ${d.texto_padrao ?? null} ELSE texto_padrao END,
         observacoes_padrao = CASE WHEN ${has("observacoes_padrao")} THEN ${d.observacoes_padrao ?? null} ELSE observacoes_padrao END,
         modalidade_remoto = CASE WHEN ${has("modalidade_remoto")} THEN ${d.modalidade_remoto ?? null} ELSE modalidade_remoto END,

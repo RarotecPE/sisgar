@@ -1,6 +1,6 @@
 import { sql } from "@/lib/db"
 import { NextRequest, NextResponse } from "next/server"
-import { competenciaAnterior, ehPrimeiroDiaUtil } from "@/lib/apuracao"
+import { competenciaAnterior, ehPrimeiroDiaUtil, aplicarDistribuicaoEmissao } from "@/lib/apuracao"
 
 // Executa a emissao automatica dos relatorios de apuracao mensal.
 // Deve rodar diariamente (Vercel Cron); por padrao so age no primeiro dia util
@@ -82,21 +82,20 @@ async function executar(request: NextRequest) {
       } catch {
         clienteIds = []
       }
-      if (clienteIds.length === 0 && m.cliente_id) clienteIds = [m.cliente_id]
+      if (clienteIds.length === 0 && m.cliente_id) clienteIds = [Number(m.cliente_id)]
       if (clienteIds.length === 0) {
         ignorados.push({ modelo_id: m.id, motivo: "sem clientes" })
         continue
       }
 
-      // Todos os relatorios de visita dos clientes na competencia
+      // Relatorios de visita dos clientes na competencia (com seus modulos, p/ segregar por modulo)
       const visitas = await sql`
-        SELECT id FROM relatorios_visitas
+        SELECT id, modulos FROM relatorios_visitas
         WHERE cliente_id = ANY(${clienteIds})
           AND COALESCE(data_relatorio, data_visita) >= ${inicio}
           AND COALESCE(data_relatorio, data_visita) <= ${fim}
         ORDER BY COALESCE(data_relatorio, data_visita) ASC, id ASC
       `
-      const visitasIds = visitas.map((v: any) => v.id)
 
       // Itens e valor total herdados do modelo
       let itens: any[] = []
@@ -112,12 +111,62 @@ async function executar(request: NextRequest) {
       } catch {
         itensServico = []
       }
+
+      // SEGREGACAO POR MODULO: anexa somente os relatorios de visita (RARs) cujos modulos
+      // casam com os modulos deste modelo. Sem esse filtro, a emissao automatica anexava
+      // TODOS os RARs do cliente na competencia (misturando contabilidade, patrimonio,
+      // almoxarifado, etc.). Mesma normalizacao/criterio usado em /api/apuracao/visitas-disponiveis.
+      const normalizar = (s: string) =>
+        String(s)
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .trim()
+          .toLowerCase()
+      const modulosModelo = (itens || [])
+        .map((i: any) => normalizar(i?.nome || ""))
+        .filter(Boolean)
+      const visitasIds = visitas
+        .filter((v: any) => {
+          if (modulosModelo.length === 0) return true // modelo sem modulos definidos: mantem comportamento antigo
+          let mods: string[] = []
+          try {
+            mods = typeof v.modulos === "string" ? JSON.parse(v.modulos) : v.modulos || []
+          } catch {
+            mods = []
+          }
+          const modsNorm = (mods || []).map(normalizar)
+          // Um RAR sem modulos nao casa com nenhum modelo especifico -> nao anexa.
+          return modsNorm.some((ml) => modulosModelo.some((mf) => ml.includes(mf) || mf.includes(ml)))
+        })
+        .map((v: any) => v.id)
+
+      // Distribuicao mensal variavel: a quantidade de cada item marcado varia por ORDEM DE
+      // EMISSAO. O indice = nº de relatorios ja emitidos do modelo (0-based). Sobrescreve o
+      // snapshot antes de calcular o valor total e inserir (servidor = fonte da verdade).
+      const temDistribuicao = itensServico.some(
+        (i: any) => i?.distribuir_mensal && Array.isArray(i?.distribuicao_mensal),
+      )
+      if (temDistribuicao) {
+        const cnt = await sql`
+          SELECT COUNT(*)::int AS n FROM apuracao_relatorios
+          WHERE modelo_id = ${m.id} AND status = 'emitido'
+        `
+        const indice = Number(cnt[0]?.n) || 0
+        itensServico = aplicarDistribuicaoEmissao(itensServico as any, indice)
+      }
+
       const valorTotal =
         m.modo_valor === "por_modulo"
           ? itens.reduce((s: number, i: any) => s + (Number(i.valor) || 0), 0)
           : m.modo_valor === "por_item"
             ? itensServico.reduce((s: number, i: any) => s + (Number(i.valor) || 0), 0)
             : Number(m.valor_global) || 0
+
+      // Segregacao defensiva: apenas o modo "por_item" exibe a tabela de itens de servico
+      // no PDF. Em modo global/por_modulo, zeramos o snapshot de itens_servico para que
+      // nenhum item residual herdado do modelo (ex.: linhas de outro modulo) seja gravado
+      // no relatorio emitido.
+      if (m.modo_valor !== "por_item") itensServico = []
 
       const numero = (Number(m.ultimo_numero) || 0) + 1
       const clientePrincipal = clienteIds[0]

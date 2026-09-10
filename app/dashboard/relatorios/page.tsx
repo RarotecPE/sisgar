@@ -137,6 +137,11 @@ export default function RelatoriosPage() {
   }
 
   const filteredRelatorios = relatorios?.filter((relatorio) => {
+    // Registros sem motivo/tipo são órfãos de origem indeterminada (reenvio,
+    // reimpressão ou duplicação). Preservamos no banco, mas não os exibimos
+    // no histórico até que possam ser classificados com segurança.
+    if (!relatorio.tipo_servico?.trim()) return false
+
     // Se não for gestor, filtrar apenas relatórios onde o usuário está vinculado
     if (!userIsGestor && user?.tecnico_rarotec_id) {
       // Verificar se o usuário está no array de técnicos do relatório
@@ -205,7 +210,7 @@ export default function RelatoriosPage() {
       ],
       data: filteredRelatorios.map(r => ({
         ...r,
-        orgao: r.entidades?.[0]?.nome || r.orgao || "-",
+        orgao: (typeof r.entidades?.[0] === "object" ? r.entidades[0]?.nome : r.entidades?.[0]) || r.orgao || "-",
         tecnicos: r.tecnicos_rarotec?.map((t: any) => t.nome).join(", ") || "-",
       }))
     })
@@ -227,7 +232,7 @@ export default function RelatoriosPage() {
       data: filteredRelatorios.map(r => ({
         ...r,
         municipio_uf: `${r.municipio || "-"}/${r.estado || "-"}`,
-        orgao: r.entidades?.[0]?.nome || r.orgao || "-",
+        orgao: (typeof r.entidades?.[0] === "object" ? r.entidades[0]?.nome : r.entidades?.[0]) || r.orgao || "-",
       }))
     })
   }
@@ -812,13 +817,13 @@ export default function RelatoriosPage() {
                                 </DropdownMenuItem>
                                 <EnviarEmailDialog
                                   relatorioId={relatorio.id}
-                                  numeroAutenticacao={relatorio.numero_autenticacao}
+                                  numeroAutenticacao={relatorio.numero_autenticacao || undefined}
                                   tecnicos={relatorio.tecnicos_rarotec_nomes?.map((t: any) => ({ nome: t.nome, email: t.email || "" })) || []}
                                   clienteNome={relatorio.cliente_nome}
-                                  clienteEmail={relatorio.cliente_email}
+                                  clienteEmail={relatorio.cliente_email || undefined}
                                   representantes={relatorio.representantes_cliente?.map((r: any) => ({ nome: r.nome, email: r.email || "" })) || []}
-                                  municipio={relatorio.municipio}
-                                  tipoServico={relatorio.tipo_servico}
+                                  municipio={relatorio.municipio || undefined}
+                                  tipoServico={relatorio.tipo_servico || undefined}
                                   dataAtendimento={relatorio.data_visita}
                                   trigger={
                                     <DropdownMenuItem onSelect={(e) => e.preventDefault()}>

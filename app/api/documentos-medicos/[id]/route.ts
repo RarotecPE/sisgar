@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import { sql } from "@/lib/db"
 import { getSession, resolveTecnicoRarotecId } from "@/lib/auth"
 import { isGestor } from "@/lib/permissions"
-import { del } from "@vercel/blob"
+import { deleteStorageFile } from "@/lib/storage"
 
 // PATCH /api/documentos-medicos/[id]
 // Dois modos:
@@ -24,7 +24,7 @@ export async function PATCH(
   try {
     const body = await request.json()
 
-    const docs = await sql`SELECT * FROM documentos_medicos WHERE id = ${docId}`
+    const docs = await sql<any>`SELECT * FROM documentos_medicos WHERE id = ${docId}`
     if (docs.length === 0) {
       return NextResponse.json({ error: "Documento nao encontrado" }, { status: 404 })
     }
@@ -45,7 +45,7 @@ export async function PATCH(
       // Remove o arquivo antigo do blob, se existir e for diferente
       if (doc.blob_pathname && doc.blob_pathname !== body.blob_pathname) {
         try {
-          await del(doc.blob_pathname)
+          await deleteStorageFile(doc.blob_pathname)
         } catch (e) {
           console.error("Erro ao remover blob antigo (seguindo):", e)
         }
@@ -109,7 +109,7 @@ export async function DELETE(
   const docId = parseInt(id)
 
   try {
-    const docs = await sql`SELECT * FROM documentos_medicos WHERE id = ${docId}`
+    const docs = await sql<any>`SELECT * FROM documentos_medicos WHERE id = ${docId}`
     if (docs.length === 0) {
       return NextResponse.json({ error: "Documento nao encontrado" }, { status: 404 })
     }
@@ -122,10 +122,10 @@ export async function DELETE(
       return NextResponse.json({ error: "Sem permissao para remover" }, { status: 403 })
     }
 
-    // Remover o arquivo do blob, se houver
+    // Remover o arquivo do storage, se houver
     if (doc.blob_pathname) {
       try {
-        await del(doc.blob_pathname)
+        await deleteStorageFile(doc.blob_pathname)
       } catch (e) {
         console.error("Erro ao remover blob (seguindo com delete do registro):", e)
       }

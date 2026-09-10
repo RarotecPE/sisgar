@@ -116,7 +116,7 @@ export function RelatorioView({ relatorioId }: RelatorioViewProps) {
           cnpj: relatorio.cliente_cnpj || "-",
           endereco: relatorio.cliente_endereco,
         } : null,
-        entidades: parseOrgaos(relatorio.orgao_atendido),
+        entidades: parseOrgaos(relatorio.orgao_atendido || undefined),
         modulos: modulos,
         servicos: relatorio.tema ? relatorio.tema.split(", ") : [],
         tecnicosRarotec: relatorio.tecnicos_rarotec_nomes && relatorio.tecnicos_rarotec_nomes.length > 0
@@ -157,7 +157,8 @@ export function RelatorioView({ relatorioId }: RelatorioViewProps) {
       }
       
       const blob = await generateRelatorioPDF(pdfData)
-      const dataFormatada = new Date(relatorio.data_visita || relatorio.data_relatorio).toISOString().split("T")[0]
+      const dataBase = relatorio.data_visita || relatorio.data_relatorio || new Date().toISOString()
+      const dataFormatada = new Date(dataBase).toISOString().split("T")[0]
       const clienteNome = relatorio.cliente_nome || relatorio.orgao_atendido || "relatorio"
       const filename = `relatorio-${clienteNome.replace(/\s+/g, "-").toLowerCase()}-${dataFormatada}.pdf`
       downloadPDF(blob, filename)
@@ -206,14 +207,14 @@ export function RelatorioView({ relatorioId }: RelatorioViewProps) {
         </Button>
         <EnviarEmailDialog
           relatorioId={relatorio.id}
-          numeroAutenticacao={relatorio.numero_autenticacao}
+          numeroAutenticacao={relatorio.numero_autenticacao || undefined}
           tecnicos={relatorio.tecnicos_rarotec_nomes?.map((t: any) => ({ nome: t.nome, email: t.email || "" })) || []}
           clienteNome={relatorio.cliente_nome}
-          clienteEmail={relatorio.cliente_email}
+          clienteEmail={relatorio.cliente_email || undefined}
           representantes={relatorio.representantes_cliente?.map((r: any) => ({ nome: r.nome, email: r.email || "" })) || []}
-          municipio={relatorio.municipio}
-          tipoServico={relatorio.tipo_servico}
-          dataAtendimento={relatorio.data_visita}
+          municipio={relatorio.municipio || undefined}
+          tipoServico={relatorio.tipo_servico || undefined}
+          dataAtendimento={relatorio.data_visita || ""}
         />
       </div>
 

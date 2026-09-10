@@ -16,7 +16,7 @@ export async function GET() {
   try {
     const nexusUsers = await fetchAuthorizedNexusUsers()
 
-    const tecnicosExistentes = await sql`
+    const tecnicosExistentes = await sql<{ id: number; nome: string; email: string | null; nexus_email: string | null }>`
       SELECT id, nome, email, nexus_email 
       FROM tecnicos_rarotec
     `

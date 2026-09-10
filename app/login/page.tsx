@@ -69,7 +69,7 @@ function LoginContent() {
       setCheckingNexusSession(false)
 
       if (event.data.status === "success") {
-        router.replace(event.data.redirectTo || nextPath)
+        window.location.href = event.data.redirectTo || nextPath
         return
       }
 
@@ -83,7 +83,7 @@ function LoginContent() {
       const session = response?.ok ? await response.json().catch(() => null) : null
 
       if (session?.authenticated) {
-        router.replace(nextPath)
+        window.location.href = nextPath
         return
       }
 

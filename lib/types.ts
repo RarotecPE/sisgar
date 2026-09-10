@@ -22,6 +22,21 @@ export interface TecnicoRarotec {
   updated_at: string
 }
 
+export interface AgendaItem {
+  id: number
+  titulo: string
+  descricao?: string | null
+  tecnico_rarotec_id?: number | null
+  cliente_id?: number | null
+  data_inicio: string
+  data_fim?: string | null
+  tipo?: string
+  status?: string
+  local?: string | null
+  created_at?: string
+  updated_at?: string
+}
+
 export interface Cliente {
   id: number
   razao_social: string
@@ -137,8 +152,17 @@ export interface RelatorioVisita {
   tecnico_nome?: string
   tecnico_email?: string
   cliente_nome?: string
+  cliente_email?: string | null
+  cliente_ou_municipio?: string
   tecnico_cliente_nome?: string
   tecnico_cliente_email?: string
+  tecnicos_rarotec_nomes?: Array<{ id: number; nome: string; email?: string }>
+  tecnicos_rarotec?: Array<{ id: number; nome: string; email?: string }>
+  representantes_cliente?: Array<{ nome: string; email?: string; cpf?: string }>
+  entidades?: Array<{ nome?: string } | string>
+  orgao?: string | null
+  criado_por_nome?: string | null
+  data_fim?: string | null
 }
 
 export interface PesquisaSatisfacao {
@@ -150,4 +174,80 @@ export interface PesquisaSatisfacao {
   nota_tempo: number | null
   comentarios: string | null
   data_resposta: string
+}
+
+export interface ResponsabilidadeModulo {
+  id: number
+  cliente_id: number
+  cliente_nome: string
+  cliente_cidade: string | null
+  cliente_estado: string | null
+  vinculado_municipio: boolean
+  modulo: string
+  orgao_id: number | null
+  orgao_nome: string | null
+  orgao_tipo: string | null
+  tecnico_rarotec_id: number
+  tecnico_nome: string
+  tecnico_email: string | null
+  observacoes: string | null
+  nao_aplicavel: boolean
+  tipo_atribuicao: "principal" | "excecao"
+  orgaos_herdados: number
+  created_at: string
+  updated_at: string
+}
+
+export interface ChecklistModeloItem {
+  id: number
+  titulo: string
+  descricao: string | null
+  modulo: string | null
+  ordem: number
+  obrigatorio: boolean
+  exige_observacao_negativa: boolean
+  ativo: boolean
+  created_at: string
+  updated_at: string
+}
+
+export type ChecklistItemStatus =
+  | "pendente"
+  | "atendido"
+  | "nao_atendido"
+  | "nao_se_aplica"
+  | "pendencia_externa"
+
+export interface ChecklistExecucaoItem {
+  id: number
+  modelo_item_id: number | null
+  titulo: string
+  descricao: string | null
+  modulo: string | null
+  ordem: number
+  obrigatorio: boolean
+  exige_observacao_negativa: boolean
+  status: ChecklistItemStatus
+  observacao: string | null
+  respondido_em: string | null
+}
+
+export interface ChecklistExecucao {
+  id: number
+  responsabilidade_id: number
+  competencia: string
+  tecnico_rarotec_id: number
+  tecnico_nome: string
+  cliente_id: number
+  cliente_nome: string
+  cliente_cidade: string | null
+  cliente_estado: string | null
+  modulo: string
+  orgao_id: number | null
+  orgao_nome: string | null
+  tipo_atribuicao: "principal" | "excecao"
+  status: "pendente" | "em_andamento" | "concluido"
+  observacao_geral: string | null
+  finalizado_at: string | null
+  itens: ChecklistExecucaoItem[]
 }
