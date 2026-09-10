@@ -1,9 +1,9 @@
 import { redirect } from "next/navigation"
-import { getSession } from "@/lib/auth"
+import { getSession, resolveTecnicoRarotecId } from "@/lib/auth"
 import { AppSidebar } from "@/components/app-sidebar"
 import { DashboardHeaderActions } from "@/components/dashboard-header-actions"
 import { ChecklistPendenciaBanner } from "@/components/checklist-pendencia-banner"
-import { AuthProvider } from "@/lib/auth-context"
+import { AuthProvider, User } from "@/lib/auth-context"
 
 export default async function DashboardLayout({
   children,
@@ -16,10 +16,23 @@ export default async function DashboardLayout({
     redirect("/login")
   }
 
+  const tecnicoRarotecId = await resolveTecnicoRarotecId(user)
+  const initialUser: User = {
+    id: user.id,
+    nexus_user_id: user.nexus_user_id ?? null,
+    nome: user.nome,
+    email: user.email,
+    avatar_url: user.avatar_url ?? null,
+    cargo: user.cargo ?? null,
+    cargos: user.cargo ? [user.cargo] : [],
+    apuracao_mensal: user.apuracao_mensal ?? false,
+    tecnico_rarotec_id: tecnicoRarotecId,
+  }
+
   return (
-    <AuthProvider>
+    <AuthProvider initialUser={initialUser}>
       <div className="min-h-screen bg-background">
-        <AppSidebar user={user} />
+        <AppSidebar user={initialUser} />
         <main className="lg:pl-64">
           <header className="sticky top-0 z-30 hidden h-16 items-center justify-between border-b border-border bg-card/85 px-6 backdrop-blur-xl lg:flex">
             <div>
@@ -28,7 +41,7 @@ export default async function DashboardLayout({
                 Sistema de Gestão Administrativa
               </h2>
             </div>
-            <DashboardHeaderActions user={user} />
+            <DashboardHeaderActions user={initialUser} />
           </header>
           <div className="min-h-[calc(100vh-4rem)]">
             {children}

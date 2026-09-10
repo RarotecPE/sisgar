@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Users, Building2, FileText, Calendar, ArrowRight } from "lucide-react"
+import { Users, Building2, FileText, Calendar, ArrowRight, Loader2 } from "lucide-react"
 import Link from "next/link"
 import useSWR from "swr"
 import { useSession } from "@/lib/auth-context"
@@ -44,18 +44,27 @@ const statCards = [
 ]
 
 export default function DashboardPage() {
-  const { user } = useSession()
+  const { user, loading } = useSession()
   const userIsGestor = user?.nome ? isGestor(user.nome, user.cargo) : false
   const tecnicoId = user?.tecnico_rarotec_id
 
-  // Construir URLs com parâmetros de filtro
-  const statsUrl = `/api/dashboard/stats?is_gestor=${userIsGestor}${tecnicoId ? `&tecnico_id=${tecnicoId}` : ''}`
-  const activitiesUrl = `/api/dashboard/activities?is_gestor=${userIsGestor}${tecnicoId ? `&tecnico_id=${tecnicoId}` : ''}`
-  const scheduleUrl = `/api/dashboard/schedule?is_gestor=${userIsGestor}${tecnicoId ? `&tecnico_id=${tecnicoId}` : ''}`
+  // Construir URLs com parâmetros de filtro somente quando houver usuário verificado
+  const statsUrl = user ? `/api/dashboard/stats?is_gestor=${userIsGestor}${tecnicoId ? `&tecnico_id=${tecnicoId}` : ''}` : null
+  const activitiesUrl = user ? `/api/dashboard/activities?is_gestor=${userIsGestor}${tecnicoId ? `&tecnico_id=${tecnicoId}` : ''}` : null
+  const scheduleUrl = user ? `/api/dashboard/schedule?is_gestor=${userIsGestor}${tecnicoId ? `&tecnico_id=${tecnicoId}` : ''}` : null
 
   const { data: stats } = useSWR(statsUrl, fetcher)
   const { data: activities } = useSWR(activitiesUrl, fetcher)
   const { data: schedule } = useSWR(scheduleUrl, fetcher)
+
+  if (loading || !user) {
+    return (
+      <div className="flex min-h-[50vh] w-full flex-col items-center justify-center gap-3">
+        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+        <p className="text-sm text-muted-foreground">Carregando painel...</p>
+      </div>
+    )
+  }
 
   // Filtrar cards baseado em permissões
   const visibleStatCards = statCards.filter(card => {

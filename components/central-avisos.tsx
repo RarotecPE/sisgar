@@ -143,33 +143,41 @@ function LinhaDetalhe({ children }: { children: React.ReactNode }) {
 // sem tirar o usuário da tela. Consolida checklist, financeiro, relatórios,
 // documentação médica, solicitações de agenda e chamados do OuveRarotec.
 export function CentralAvisos() {
-  const { user } = useSession()
+  const { user, loading } = useSession()
   const userIsGestor = user?.nome ? isGestor(user.nome, user.cargo) : false
-  const podeApuracao = canApuracaoMensal(user?.cargo, user?.apuracao_mensal)
+  const podeApuracao = user ? canApuracaoMensal(user.cargo, user.apuracao_mensal) : false
   const tecnicoId = user?.tecnico_rarotec_id
 
-  const { data: checklist } = useSWR("/api/checklists/alertas", fetcher, { refreshInterval: 60000 })
-  const { data: contratos } = useSWR(podeApuracao ? "/api/dashboard/contratos-alerta" : null, fetcher)
-  const pendUrl = userIsGestor
-    ? "/api/dashboard/pendencias?is_gestor=true"
-    : tecnicoId
-      ? `/api/dashboard/pendencias?tecnico_id=${tecnicoId}`
-      : null
+  const { data: checklist } = useSWR(user ? "/api/checklists/alertas" : null, fetcher, { refreshInterval: 60000 })
+  const { data: contratos } = useSWR(user && podeApuracao ? "/api/dashboard/contratos-alerta" : null, fetcher)
+  const pendUrl = !user
+    ? null
+    : userIsGestor
+      ? "/api/dashboard/pendencias?is_gestor=true"
+      : tecnicoId
+        ? `/api/dashboard/pendencias?tecnico_id=${tecnicoId}`
+        : null
   const { data: pendencias } = useSWR(pendUrl, fetcher)
-  const pendMedUrl = userIsGestor
-    ? "/api/dashboard/pendencias-medicas"
-    : tecnicoId
-      ? `/api/dashboard/pendencias-medicas?tecnico_id=${tecnicoId}`
-      : null
+  const pendMedUrl = !user
+    ? null
+    : userIsGestor
+      ? "/api/dashboard/pendencias-medicas"
+      : tecnicoId
+        ? `/api/dashboard/pendencias-medicas?tecnico_id=${tecnicoId}`
+        : null
   const { data: pendenciasMedicas } = useSWR(pendMedUrl, fetcher)
-  const { data: documentosAnalise } = useSWR(userIsGestor ? "/api/dashboard/documentos-analise" : null, fetcher)
+  const { data: documentosAnalise } = useSWR(user && userIsGestor ? "/api/dashboard/documentos-analise" : null, fetcher)
   const { data: solicitacoes, mutate: mutateSolic } = useSWR(
-    userIsGestor ? "/api/agenda-solicitacoes/pendentes" : null,
+    user && userIsGestor ? "/api/agenda-solicitacoes/pendentes" : null,
     fetcher,
   )
-  const { data: ouve } = useSWR(userIsGestor ? "/api/dashboard/ouve-abertos" : null, fetcher)
+  const { data: ouve } = useSWR(user && userIsGestor ? "/api/dashboard/ouve-abertos" : null, fetcher)
 
   const [aberto, setAberto] = useState<string | null>(null)
+
+  if (loading || !user) {
+    return null
+  }
 
   async function responderSolicitacao(id: number, acao: "aprovar" | "rejeitar") {
     await fetch("/api/agenda-solicitacoes", {
@@ -533,10 +541,12 @@ export function CentralAvisos() {
   if (grupos.length === 0) {
     if (!carregou) return null
     return (
-      <Card className="mb-8 border-emerald-200/60 bg-emerald-50/40">
+      <Card className="mb-8 border-emerald-200 bg-emerald-50/60 dark:border-emerald-500/30 dark:bg-emerald-950/40">
         <CardContent className="flex items-center gap-3 p-4">
-          <CheckCircle2 className="h-5 w-5 text-emerald-600" />
-          <p className="text-sm font-medium text-emerald-800">Tudo em dia — nenhum aviso pendente.</p>
+          <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+          <p className="text-sm font-medium text-emerald-900 dark:text-emerald-200">
+            Tudo em dia — nenhum aviso pendente.
+          </p>
         </CardContent>
       </Card>
     )
