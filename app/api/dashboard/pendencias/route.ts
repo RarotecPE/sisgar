@@ -29,70 +29,70 @@ export async function GET(request: NextRequest) {
     const hoje = new Date()
     const hojeStr = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}-${String(hoje.getDate()).padStart(2, '0')}`
 
-    // Buscar TODOS os eventos da agenda (inclui futuros, para calcular
-    // corretamente o dia de cobranca do grupo de relatorio unico)
-    const eventosAgenda = modoGestor
-      ? await sql`
-          SELECT
-            a.id, a.titulo, a.data_inicio, a.local, a.tipo, a.cliente_id,
-            a.relatorio_grupo_id, a.tecnico_rarotec_id,
-            c.cidade AS cliente_cidade,
-            t.nome AS tecnico_nome
-          FROM agenda_trabalhista a
-          LEFT JOIN clientes c ON c.id = a.cliente_id
-          LEFT JOIN tecnicos_rarotec t ON t.id = a.tecnico_rarotec_id
-          ORDER BY a.data_inicio DESC
-        `
-      : await sql`
-          SELECT
-            a.id, a.titulo, a.data_inicio, a.local, a.tipo, a.cliente_id,
-            a.relatorio_grupo_id, a.tecnico_rarotec_id,
-            c.cidade AS cliente_cidade
-          FROM agenda_trabalhista a
-          LEFT JOIN clientes c ON c.id = a.cliente_id
-          WHERE a.tecnico_rarotec_id = ${tecnicoIdNum}
-          ORDER BY a.data_inicio DESC
-        `
+    // Executar todas as consultas em paralelo para eliminar roundtrips sequenciais
+    const [eventosAgenda, abonos, paresFixosRows, relatorios] = await Promise.all([
+      modoGestor
+        ? sql`
+            SELECT
+              a.id, a.titulo, a.data_inicio, a.local, a.tipo, a.cliente_id,
+              a.relatorio_grupo_id, a.tecnico_rarotec_id,
+              c.cidade AS cliente_cidade,
+              t.nome AS tecnico_nome
+            FROM agenda_trabalhista a
+            LEFT JOIN clientes c ON c.id = a.cliente_id
+            LEFT JOIN tecnicos_rarotec t ON t.id = a.tecnico_rarotec_id
+            ORDER BY a.data_inicio DESC
+          `
+        : sql`
+            SELECT
+              a.id, a.titulo, a.data_inicio, a.local, a.tipo, a.cliente_id,
+              a.relatorio_grupo_id, a.tecnico_rarotec_id,
+              c.cidade AS cliente_cidade
+            FROM agenda_trabalhista a
+            LEFT JOIN clientes c ON c.id = a.cliente_id
+            WHERE a.tecnico_rarotec_id = ${tecnicoIdNum}
+            ORDER BY a.data_inicio DESC
+          `,
+      modoGestor
+        ? sql`SELECT agenda_evento_id, tecnico_id FROM agenda_abonos`
+        : sql`SELECT agenda_evento_id, tecnico_id FROM agenda_abonos WHERE tecnico_id = ${tecnicoIdNum}`,
+      modoGestor
+        ? sql`SELECT tecnico_rarotec_id, cliente_id FROM tecnico_clientes_fixos`
+        : sql`SELECT tecnico_rarotec_id, cliente_id FROM tecnico_clientes_fixos WHERE tecnico_rarotec_id = ${tecnicoIdNum}`,
+      modoGestor
+        ? sql`
+            SELECT r.id, r.data_visita, r.data_relatorio, r.municipio,
+                   r.tecnicos_rarotec_ids, r.tecnico_rarotec_id
+            FROM relatorios_visitas r
+          `
+        : sql`
+            SELECT r.id, r.data_visita, r.data_relatorio, r.municipio,
+                   r.tecnicos_rarotec_ids, r.tecnico_rarotec_id
+            FROM relatorios_visitas r
+            WHERE r.tecnico_rarotec_id = ${tecnicoIdNum}
+              OR r.tecnicos_rarotec_ids::text LIKE ${'%' + tecnicoId + '%'}
+          `,
+    ])
 
-    // Buscar abonos
-    const abonos = modoGestor
-      ? await sql`SELECT agenda_evento_id, tecnico_id FROM agenda_abonos`
-      : await sql`SELECT agenda_evento_id, tecnico_id FROM agenda_abonos WHERE tecnico_id = ${tecnicoIdNum}`
-    const abonosSet = new Set(abonos.map(a => `${a.agenda_evento_id}-${a.tecnico_id}`))
+    const abonosSet = new Set(abonos.map((a: any) => `${a.agenda_evento_id}-${a.tecnico_id}`))
 
-    // Pares fixos (tecnico <-> cliente) para relatorio semanal unico
-    const paresFixosRows = modoGestor
-      ? await sql`SELECT tecnico_rarotec_id, cliente_id FROM tecnico_clientes_fixos`
-      : await sql`SELECT tecnico_rarotec_id, cliente_id FROM tecnico_clientes_fixos WHERE tecnico_rarotec_id = ${tecnicoIdNum}`
     const paresFixosSet = new Set<string>(
       paresFixosRows.map((p: any) => chaveParFixo(p.tecnico_rarotec_id, p.cliente_id))
     )
 
-    // Buscar relatórios
-    const relatorios = modoGestor
-      ? await sql`
-          SELECT r.id, r.data_visita, r.data_relatorio, r.municipio,
-                 r.tecnicos_rarotec_ids, r.tecnico_rarotec_id
-          FROM relatorios_visitas r
-        `
-      : await sql`
-          SELECT r.id, r.data_visita, r.data_relatorio, r.municipio,
-                 r.tecnicos_rarotec_ids, r.tecnico_rarotec_id
-          FROM relatorios_visitas r
-          WHERE r.tecnico_rarotec_id = ${tecnicoIdNum}
-            OR r.tecnicos_rarotec_ids::text LIKE ${'%' + tecnicoId + '%'}
-        `
-
-    // Helper: normaliza a data de um registro para YYYY-MM-DD
+    // Helper de data ultra-rápido (evita criar new Date se já for ISO string YYYY-MM-DD...)
     const toYMD = (value: any): string => {
       if (!value) return ''
+      if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}/.test(value)) {
+        return value.slice(0, 10)
+      }
       const d = new Date(value)
+      if (isNaN(d.getTime())) return ''
       return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
     }
 
-    // Helper: municipio normalizado de um evento
-    // Prioriza a cidade do cliente vinculado (fonte confiavel), depois local, depois titulo
-    const municipioDoEvento = (evento: any): string => {
+    // Helper: normaliza município de um evento
+    const extrairMunicipioDoEvento = (evento: any): string => {
       if (evento.cliente_cidade) return normalizeString(String(evento.cliente_cidade).split('/')[0])
       if (evento.local) return normalizeString(String(evento.local).split('/')[0])
       if (evento.titulo && evento.titulo.includes(' - ')) {
@@ -102,85 +102,145 @@ export async function GET(request: NextRequest) {
       return ''
     }
 
-    // Predicado: evento exige relatorio?
-    // Remove separadores (-, _, espaco, ponto) e acentos para comparar tipos de forma robusta.
-    // O tipo gravado no banco pode vir como 'home_office', 'home-office' ou 'homeoffice';
-    // todos devem ser reconhecidos como internos (nao exigem relatorio).
+    // Pré-processamento dos relatórios:
+    // 1. Faz o parse de tecnicos_rarotec_ids apenas UMA vez por relatório (evita milhões de JSON.parse em loop)
+    // 2. Indexa relatórios por data em um Map para busca O(1)
+    type ProcessedRelatorio = {
+      id: number
+      municipioNorm: string
+      tecnicoIds: Set<number>
+    }
+
+    const relatoriosPorData = new Map<string, ProcessedRelatorio[]>()
+
+    for (const rel of relatorios) {
+      const dataStr = toYMD(rel.data_visita || rel.data_relatorio)
+      if (!dataStr) continue
+
+      const munNorm = normalizeString(String(rel.municipio || '').split('/')[0])
+      const tecSet = new Set<number>()
+
+      if (rel.tecnico_rarotec_id) {
+        tecSet.add(Number(rel.tecnico_rarotec_id))
+      }
+
+      if (rel.tecnicos_rarotec_ids) {
+        if (Array.isArray(rel.tecnicos_rarotec_ids)) {
+          rel.tecnicos_rarotec_ids.forEach((id: any) => tecSet.add(Number(id)))
+        } else if (typeof rel.tecnicos_rarotec_ids === 'string') {
+          try {
+            const parsed = JSON.parse(rel.tecnicos_rarotec_ids)
+            if (Array.isArray(parsed)) {
+              parsed.forEach((id: any) => tecSet.add(Number(id)))
+            }
+          } catch {
+            // ignorar formato inválido
+          }
+        }
+      }
+
+      const item: ProcessedRelatorio = {
+        id: Number(rel.id),
+        municipioNorm: munNorm,
+        tecnicoIds: tecSet,
+      }
+
+      const lista = relatoriosPorData.get(dataStr)
+      if (lista) {
+        lista.push(item)
+      } else {
+        relatoriosPorData.set(dataStr, [item])
+      }
+    }
+
     const normalizarTipo = (s: string) =>
       String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[\s_.-]/g, '')
 
-    const exigeRelatorio = (evento: any): boolean => {
+    const tiposInternosSet = new Set(
+      ['interno', 'folga', 'ferias', 'atestado', 'consulta_medica', 'licenca_medica', 'licenca_maternidade', 'licenca_paternidade', 'feriado', 'escritorio', 'home-office', 'homeoffice', 'suspensao', 'indisponivel'].map(normalizarTipo)
+    )
+    const titulosInternos = ['home-office', 'home office', 'homeoffice', 'escritorio', 'escritório', 'folga', 'férias', 'ferias', 'atestado', 'consulta médica', 'consulta medica', 'feriado', 'suspensao', 'indisponivel']
+
+    const exigeRelatorio = (evento: any, munNorm: string): boolean => {
       const tipoNorm = normalizarTipo(evento.tipo || '')
+      if (tiposInternosSet.has(tipoNorm)) return false
       const tituloEvento = (evento.titulo || '').toLowerCase()
-      const tiposInternos = ['interno', 'folga', 'ferias', 'atestado', 'consulta_medica', 'licenca_medica', 'licenca_maternidade', 'licenca_paternidade', 'feriado', 'escritorio', 'home-office', 'homeoffice', 'suspensao', 'indisponivel']
-      if (tiposInternos.some(t => normalizarTipo(t) === tipoNorm)) return false
-      const titulosInternos = ['home-office', 'home office', 'homeoffice', 'escritorio', 'escritório', 'folga', 'férias', 'ferias', 'atestado', 'consulta médica', 'consulta medica', 'feriado', 'suspensao', 'indisponivel']
       if (titulosInternos.some(t => tituloEvento.includes(t))) return false
-      // Precisa ter municipio identificavel
-      if (!municipioDoEvento(evento)) return false
+      if (!munNorm) return false
       return true
     }
 
-    // Existe relatorio correspondente ao evento? (usa o técnico do próprio evento)
-    const temRelatorio = (evento: any): boolean => {
-      const evTecnico = evento.tecnico_rarotec_id
-      const dataEvento = toYMD(evento.data_inicio)
-      const municipioEvento = municipioDoEvento(evento)
-      return relatorios.some(rel => {
-        const dataRelatorio = toYMD(rel.data_visita || rel.data_relatorio)
-        if (dataRelatorio !== dataEvento) return false
-        const municipioRelatorio = normalizeString(String(rel.municipio || '').split('/')[0])
-        if (!municipioRelatorio.includes(municipioEvento) && !municipioEvento.includes(municipioRelatorio)) {
-          return false
+    // Verifica se evento tem relatório correspondente via busca indexada O(1) por data
+    const temRelatorio = (evTecnico: number, dataEvento: string, municipioEvento: string): boolean => {
+      const relsDoDia = relatoriosPorData.get(dataEvento)
+      if (!relsDoDia || relsDoDia.length === 0) return false
+
+      for (const rel of relsDoDia) {
+        if (!rel.municipioNorm.includes(municipioEvento) && !municipioEvento.includes(rel.municipioNorm)) {
+          continue
         }
-        let tecnicoIds: number[] = []
-        if (rel.tecnicos_rarotec_ids) {
-          try {
-            tecnicoIds = typeof rel.tecnicos_rarotec_ids === 'string'
-              ? JSON.parse(rel.tecnicos_rarotec_ids)
-              : rel.tecnicos_rarotec_ids
-          } catch { tecnicoIds = [] }
+        if (rel.tecnicoIds.has(evTecnico)) {
+          return true
         }
-        return tecnicoIds.includes(evTecnico) || rel.tecnico_rarotec_id === evTecnico
+      }
+      return false
+    }
+
+    type EventoInfo = {
+      raw: any
+      id: number
+      tecnicoId: number
+      dataStr: string
+      municipioNorm: string
+      chaveMunicipioDia: string
+      temRelatorio: boolean
+    }
+
+    const eventosComRelatorio: EventoInfo[] = []
+
+    for (const ev of eventosAgenda) {
+      const munNorm = extrairMunicipioDoEvento(ev)
+      if (!exigeRelatorio(ev, munNorm)) continue
+
+      const dataStr = toYMD(ev.data_inicio)
+      const evId = Number(ev.id)
+      const tecId = Number(ev.tecnico_rarotec_id)
+      const hasRel = temRelatorio(tecId, dataStr, munNorm)
+
+      eventosComRelatorio.push({
+        raw: ev,
+        id: evId,
+        tecnicoId: tecId,
+        dataStr,
+        municipioNorm: munNorm,
+        chaveMunicipioDia: `${tecId}__${dataStr}__${munNorm}`,
+        temRelatorio: hasRel,
       })
     }
 
-    // Eventos que exigem relatorio (todos, inclusive futuros, para calcular o grupo)
-    const eventosComRelatorio = eventosAgenda.filter(exigeRelatorio)
-
-    // Mapa eventoId -> tem relatorio?
-    const relatorioPorEvento = new Map<number, boolean>()
-    eventosComRelatorio.forEach(ev => relatorioPorEvento.set(Number(ev.id), temRelatorio(ev)))
-
-    // Cobertura por municipio: se UMA visita do mesmo tecnico+municipio+dia tem relatorio,
-    // todas as visitas daquele municipio no mesmo dia estao cobertas (1 relatorio serve).
-    // A chave inclui o técnico para funcionar no modo gestor (vários técnicos).
-    const chaveMunicipioDia = (ev: any) =>
-      `${ev.tecnico_rarotec_id}__${toYMD(ev.data_inicio)}__${municipioDoEvento(ev)}`
+    // Cobertura por município/dia
     const municipiosCobertos = new Set<string>()
-    eventosComRelatorio.forEach(ev => {
-      const idNum = Number(ev.id)
-      if (relatorioPorEvento.get(idNum) && municipioDoEvento(ev)) {
-        municipiosCobertos.add(chaveMunicipioDia(ev))
+    for (const ev of eventosComRelatorio) {
+      if (ev.temRelatorio && ev.municipioNorm) {
+        municipiosCobertos.add(ev.chaveMunicipioDia)
       }
-    })
+    }
 
     // Calcular grupos (fixo/esporadico/individual) e status
     const eventosAgrupaveis: EventoAgrupavel[] = eventosComRelatorio.map(ev => ({
-      id: Number(ev.id),
-      tecnicoId: Number(ev.tecnico_rarotec_id),
-      clienteId: ev.cliente_id ? Number(ev.cliente_id) : null,
-      data: toYMD(ev.data_inicio),
-      relatorioGrupoId: ev.relatorio_grupo_id ? String(ev.relatorio_grupo_id) : null,
+      id: ev.id,
+      tecnicoId: ev.tecnicoId,
+      clienteId: ev.raw.cliente_id ? Number(ev.raw.cliente_id) : null,
+      data: ev.dataStr,
+      relatorioGrupoId: ev.raw.relatorio_grupo_id ? String(ev.raw.relatorio_grupo_id) : null,
     }))
-    // Evento satisfeito = relatorio proprio OU coberto pelo municipio/dia
+
     const idsSatisfeitos = new Set<number>()
-    eventosComRelatorio.forEach(ev => {
-      const idNum = Number(ev.id)
-      if (relatorioPorEvento.get(idNum) || municipiosCobertos.has(chaveMunicipioDia(ev))) {
-        idsSatisfeitos.add(idNum)
+    for (const ev of eventosComRelatorio) {
+      if (ev.temRelatorio || municipiosCobertos.has(ev.chaveMunicipioDia)) {
+        idsSatisfeitos.add(ev.id)
       }
-    })
+    }
 
     const gruposMap = calcularGruposRelatorio({
       eventos: eventosAgrupaveis,
@@ -189,28 +249,21 @@ export async function GET(request: NextRequest) {
       hojeStr,
     })
 
-    // Montar pendencias: apenas eventos ja vencidos (data <= hoje), nao abonados,
-    // sem relatorio e cujo status de grupo seja 'pendente'
+    // Montar pendências: apenas eventos já vencidos (data <= hoje), não abonados,
+    // sem relatório e cujo status de grupo seja 'pendente'
     const pendencias = []
-    for (const evento of eventosComRelatorio) {
-      const dataEvento = toYMD(evento.data_inicio)
-      if (dataEvento > hojeStr) continue // futuro nao e pendencia
+    for (const ev of eventosComRelatorio) {
+      if (ev.dataStr > hojeStr) continue // futuro não é pendência
 
-      const evId = Number(evento.id)
-      const abonoKey = `${evId}-${evento.tecnico_rarotec_id}`
+      const abonoKey = `${ev.id}-${ev.tecnicoId}`
       if (abonosSet.has(abonoKey)) continue
+      if (ev.temRelatorio) continue
+      if (municipiosCobertos.has(ev.chaveMunicipioDia)) continue
 
-      if (relatorioPorEvento.get(evId)) continue // ja tem relatorio
-
-      // Coberto por outra visita do mesmo municipio/dia (1 relatorio serve p/ o municipio)
-      if (municipiosCobertos.has(chaveMunicipioDia(evento))) continue
-
-      const grupo = gruposMap.get(evId)
-      // So e pendencia se for o dia de cobranca vencido (status 'pendente').
-      // Dias agrupados/aguardando nao contam.
+      const grupo = gruposMap.get(ev.id)
       if (grupo && grupo.status !== 'pendente') continue
 
-      pendencias.push(evento)
+      pendencias.push(ev.raw)
     }
 
     return NextResponse.json(pendencias)

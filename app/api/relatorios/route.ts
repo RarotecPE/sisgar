@@ -18,39 +18,68 @@ export async function GET(request: NextRequest) {
     const dataInicio = searchParams.get("data_inicio")
     const dataFim = searchParams.get("data_fim")
     
-    // Query base - inclui tecnicos_cliente_info para os representantes do cliente
-    let relatorios = await sql`
-      SELECT r.id, r.numero_autenticacao, r.data_visita, r.tipo_servico, r.status,
-        r.municipio, r.estado, r.orgao_atendido, r.descricao_servico, r.observacoes,
-        r.hora_inicio, r.hora_fim, r.assinatura_url, r.modulos, r.tema,
-        r.tecnicos_rarotec_ids, r.tecnicos_cliente_info, r.created_at,
-        r.tecnico_rarotec_id, r.cliente_id, r.tecnico_cliente_id,
-        t.nome as tecnico_nome,
-        t.email as tecnico_email,
-        c.nome_fantasia as cliente_nome,
-        c.email as cliente_email,
-        c.cnpj as cliente_cnpj,
-        c.endereco as cliente_endereco,
-        c.cidade as cliente_cidade,
-        c.estado as cliente_estado,
-        tc.nome as tecnico_cliente_nome,
-        tc.email as tecnico_cliente_email,
-        tc.cpf as tecnico_cliente_cpf
-      FROM relatorios_visitas r
-      LEFT JOIN tecnicos_rarotec t ON r.tecnico_rarotec_id = t.id
-      LEFT JOIN clientes c ON r.cliente_id = c.id
-      LEFT JOIN tecnicos_clientes tc ON r.tecnico_cliente_id = tc.id
-      ORDER BY r.data_visita DESC, r.created_at DESC
-    `
+    // Construir cláusula WHERE dinamicamente via SQL fragments
+    let whereClause = sql`WHERE TRUE`
 
-    // Buscar tecnicos rarotec se houver tecnicos_rarotec_ids
-    const tecnicosRarotec = await sql`SELECT id, nome, email FROM tecnicos_rarotec WHERE ativo = true`
+    if (tecnicoId && !isNaN(parseInt(tecnicoId))) {
+      const tecIdNum = parseInt(tecnicoId)
+      whereClause = sql`${whereClause} AND (r.tecnico_rarotec_id = ${tecIdNum} OR r.tecnicos_rarotec_ids::text LIKE ${'%' + tecnicoId + '%'})`
+    }
+
+    if (clienteId && !isNaN(parseInt(clienteId))) {
+      const cliIdNum = parseInt(clienteId)
+      whereClause = sql`${whereClause} AND r.cliente_id = ${cliIdNum}`
+    }
+
+    if (status && status.trim() !== '') {
+      whereClause = sql`${whereClause} AND r.status = ${status.trim()}`
+    }
+
+    if (dataInicio && /^\d{4}-\d{2}-\d{2}/.test(dataInicio)) {
+      whereClause = sql`${whereClause} AND COALESCE(r.data_visita, r.data_relatorio)::date >= ${dataInicio.slice(0, 10)}::date`
+    }
+
+    if (dataFim && /^\d{4}-\d{2}-\d{2}/.test(dataFim)) {
+      whereClause = sql`${whereClause} AND COALESCE(r.data_visita, r.data_relatorio)::date <= ${dataFim.slice(0, 10)}::date`
+    }
+
+    // Executar a consulta de relatórios filtrados e a lista de técnicos ativos em paralelo
+    const [relatoriosRows, tecnicosRarotec] = await Promise.all([
+      sql`
+        SELECT r.id, r.numero_autenticacao, r.data_visita, r.tipo_servico, r.status,
+          r.municipio, r.estado, r.orgao_atendido, r.descricao_servico, r.observacoes,
+          r.hora_inicio, r.hora_fim, r.assinatura_url, r.modulos, r.tema,
+          r.tecnicos_rarotec_ids, r.tecnicos_cliente_info, r.created_at,
+          r.tecnico_rarotec_id, r.cliente_id, r.tecnico_cliente_id,
+          t.nome as tecnico_nome,
+          t.email as tecnico_email,
+          c.nome_fantasia as cliente_nome,
+          c.email as cliente_email,
+          c.cnpj as cliente_cnpj,
+          c.endereco as cliente_endereco,
+          c.cidade as cliente_cidade,
+          c.estado as cliente_estado,
+          tc.nome as tecnico_cliente_nome,
+          tc.email as tecnico_cliente_email,
+          tc.cpf as tecnico_cliente_cpf
+        FROM relatorios_visitas r
+        LEFT JOIN tecnicos_rarotec t ON r.tecnico_rarotec_id = t.id
+        LEFT JOIN clientes c ON r.cliente_id = c.id
+        LEFT JOIN tecnicos_clientes tc ON r.tecnico_cliente_id = tc.id
+        ${whereClause}
+        ORDER BY r.data_visita DESC, r.created_at DESC
+      `,
+      sql`SELECT id, nome, email FROM tecnicos_rarotec WHERE ativo = true`
+    ])
     
-    // Buscar todos os técnicos de clientes
-    const tecnicosClientes = await sql`SELECT id, nome, email, cpf FROM tecnicos_clientes`
+    // Indexar técnicos em Map para lookup O(1)
+    const tecnicosMap = new Map<number, any>()
+    for (const t of (tecnicosRarotec as any[])) {
+      tecnicosMap.set(Number(t.id), t)
+    }
     
     // Enriquecer relatórios com nomes dos técnicos
-    relatorios = relatorios.map((r: any) => {
+    let relatorios = (relatoriosRows as any[]).map((r: any) => {
       let tecnicosIds: number[] = []
       if (r.tecnicos_rarotec_ids) {
         try {
@@ -60,9 +89,9 @@ export async function GET(request: NextRequest) {
         } catch { tecnicosIds = [] }
       }
       
-      const tecnicosNomes = tecnicosIds
-        .map((id: number) => tecnicosRarotec.find((t: any) => t.id === id))
-        .filter(Boolean)
+      const tecnicosNomes = Array.isArray(tecnicosIds)
+        ? tecnicosIds.map((id: number) => tecnicosMap.get(Number(id))).filter(Boolean)
+        : []
       
       // Parse tecnicos_cliente_info se existir
       let tecnicosClientesData: any[] = []
@@ -89,19 +118,26 @@ export async function GET(request: NextRequest) {
         cliente_ou_municipio: r.cliente_nome || r.municipio || "Não informado",
         cliente_email: r.cliente_email || null,
         // Representantes do cliente (técnicos do cliente)
-        representantes_cliente: tecnicosClientesData.filter((tc: any) => tc && tc.nome)
+        representantes_cliente: Array.isArray(tecnicosClientesData)
+          ? tecnicosClientesData.filter((tc: any) => tc && tc.nome)
+          : []
       }
     })
 
-    // Filtrar em memoria se necessario
-    if (tecnicoId || clienteId || status || dataInicio || dataFim) {
+    // Refino estrito de técnico se filtro foi solicitado
+    if (tecnicoId && !isNaN(parseInt(tecnicoId))) {
+      const tecIdNum = parseInt(tecnicoId)
       relatorios = relatorios.filter((r: any) => {
-        if (tecnicoId && r.tecnico_rarotec_id !== parseInt(tecnicoId)) return false
-        if (clienteId && r.cliente_id !== parseInt(clienteId)) return false
-        if (status && r.status !== status) return false
-        if (dataInicio && r.data_visita < dataInicio) return false
-        if (dataFim && r.data_visita > dataFim) return false
-        return true
+        if (r.tecnico_rarotec_id === tecIdNum) return true
+        if (r.tecnicos_rarotec_ids) {
+          try {
+            const ids = typeof r.tecnicos_rarotec_ids === 'string'
+              ? JSON.parse(r.tecnicos_rarotec_ids)
+              : r.tecnicos_rarotec_ids
+            if (Array.isArray(ids) && ids.map(Number).includes(tecIdNum)) return true
+          } catch {}
+        }
+        return false
       })
     }
     

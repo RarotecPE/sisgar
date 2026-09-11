@@ -226,7 +226,7 @@ export default function BatimentoPage() {
     fetcher
   )
   const { data: relatorios, isLoading: loadingRelatorios } = useSWR<Relatorio[]>(
-    "/api/relatorios",
+    `/api/relatorios?data_inicio=${periodoBusca.inicio}&data_fim=${periodoBusca.fim}`,
     fetcher
   )
   const { data: tecnicos } = useSWR<Tecnico[]>("/api/tecnicos-rarotec", fetcher)
