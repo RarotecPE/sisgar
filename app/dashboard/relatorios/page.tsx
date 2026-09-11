@@ -439,7 +439,7 @@ export default function RelatoriosPage() {
         <Card className="border shadow-sm hover:shadow-md transition-shadow">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
+              <div className="h-10 w-10 rounded-lg bg-slate-500/10 dark:bg-slate-500/15 flex items-center justify-center shrink-0">
                 <FileText className="h-5 w-5 text-slate-600 dark:text-slate-400" />
               </div>
               <div className="min-w-0">
@@ -453,7 +453,7 @@ export default function RelatoriosPage() {
         <Card className="border shadow-sm hover:shadow-md transition-shadow">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center shrink-0">
+              <div className="h-10 w-10 rounded-lg bg-emerald-500/10 dark:bg-emerald-500/15 flex items-center justify-center shrink-0">
                 <CheckCircle2 className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
               </div>
               <div className="min-w-0">
@@ -467,7 +467,7 @@ export default function RelatoriosPage() {
         <Card className="border shadow-sm hover:shadow-md transition-shadow">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
+              <div className="h-10 w-10 rounded-lg bg-blue-500/10 dark:bg-blue-500/15 flex items-center justify-center shrink-0">
                 <CalendarDays className="h-5 w-5 text-blue-600 dark:text-blue-400" />
               </div>
               <div className="min-w-0">
@@ -475,7 +475,7 @@ export default function RelatoriosPage() {
                 <div className="flex items-center gap-2">
                   <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{stats.esteMes}</p>
                   {variacaoMes !== 0 && (
-                    <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${variacaoMes > 0 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>
+                    <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${variacaoMes > 0 ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300' : 'bg-rose-500/15 text-rose-700 dark:text-rose-300'}`}>
                       {variacaoMes > 0 ? '+' : ''}{variacaoMes}%
                     </span>
                   )}
@@ -488,7 +488,7 @@ export default function RelatoriosPage() {
         <Card className="border shadow-sm hover:shadow-md transition-shadow">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
+              <div className="h-10 w-10 rounded-lg bg-slate-500/10 dark:bg-slate-500/15 flex items-center justify-center shrink-0">
                 <BarChart3 className="h-5 w-5 text-slate-600 dark:text-slate-400" />
               </div>
               <div className="min-w-0">
@@ -774,12 +774,12 @@ export default function RelatoriosPage() {
                           {/* Status */}
                           <div>
                             {isCompleto ? (
-                              <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400 whitespace-nowrap">
+                              <Badge className="bg-emerald-500/15 text-emerald-700 hover:bg-emerald-500/20 dark:text-emerald-300 whitespace-nowrap">
                                 <CheckCircle2 className="h-3 w-3 mr-1" />
                                 Concluído
                               </Badge>
                             ) : relatorio.status === "pendente" ? (
-                              <Badge variant="secondary" className="bg-amber-100 text-amber-700 hover:bg-amber-100 dark:bg-amber-900/30 dark:text-amber-400 whitespace-nowrap">
+                              <Badge variant="secondary" className="bg-amber-500/15 text-amber-700 hover:bg-amber-500/20 dark:text-amber-300 whitespace-nowrap">
                                 <Clock className="h-3 w-3 mr-1" />
                                 Pendente
                               </Badge>
@@ -861,12 +861,12 @@ export default function RelatoriosPage() {
                               </span>
                             </div>
                             {isCompleto ? (
-                              <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400 shrink-0">
+                              <Badge className="bg-emerald-500/15 text-emerald-700 hover:bg-emerald-500/20 dark:text-emerald-300 shrink-0">
                                 <CheckCircle2 className="h-3 w-3 mr-1" />
                                 Concluído
                               </Badge>
                             ) : (
-                              <Badge variant="secondary" className="bg-amber-100 text-amber-700 hover:bg-amber-100 shrink-0">
+                              <Badge variant="secondary" className="bg-amber-500/15 text-amber-700 hover:bg-amber-500/20 dark:text-amber-300 shrink-0">
                                 <Clock className="h-3 w-3 mr-1" />
                                 Pendente
                               </Badge>

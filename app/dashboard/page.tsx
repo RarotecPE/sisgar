@@ -17,8 +17,8 @@ const statCards = [
     title: "Tecnicos Ativos",
     description: "Profissionais em campo",
     icon: Users,
-    color: "text-blue-600",
-    bgColor: "bg-blue-50",
+    color: "text-blue-600 dark:text-blue-400",
+    bgColor: "bg-blue-500/10 dark:bg-blue-500/15",
     key: "tecnicos",
     href: "/dashboard/tecnicos-rarotec",
     gestorOnly: true,
@@ -27,8 +27,8 @@ const statCards = [
     title: "Clientes",
     description: "Bases atendidas",
     icon: Building2,
-    color: "text-emerald-600",
-    bgColor: "bg-emerald-50",
+    color: "text-emerald-600 dark:text-emerald-400",
+    bgColor: "bg-emerald-500/10 dark:bg-emerald-500/15",
     key: "clientes",
     href: "/dashboard/clientes",
   },
@@ -36,8 +36,8 @@ const statCards = [
     title: "Agenda Hoje",
     description: "Compromissos do dia",
     icon: Calendar,
-    color: "text-violet-600",
-    bgColor: "bg-violet-50",
+    color: "text-violet-600 dark:text-violet-400",
+    bgColor: "bg-violet-500/10 dark:bg-violet-500/15",
     key: "agendaHoje",
     href: "/dashboard/agenda",
   },
@@ -183,8 +183,8 @@ export default function DashboardPage() {
                       variant={activity.status === "concluido" ? "default" : "secondary"}
                       className={
                         activity.status === "concluido"
-                          ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-100"
-                          : "bg-amber-100 text-amber-700 hover:bg-amber-100"
+                          ? "bg-emerald-500/15 text-emerald-700 hover:bg-emerald-500/20 dark:text-emerald-300"
+                          : "bg-amber-500/15 text-amber-700 hover:bg-amber-500/20 dark:text-amber-300"
                       }
                     >
                       {activity.status === "concluido" ? "Concluido" : "Pendente"}
@@ -234,7 +234,7 @@ export default function DashboardPage() {
                       key={String(item.id)}
                       className="flex items-center gap-4 rounded-lg border border-border/50 bg-muted/30 p-3 transition-colors hover:bg-muted/50"
                     >
-                      <div className="flex h-10 w-10 shrink-0 flex-col items-center justify-center rounded-lg bg-violet-100 text-violet-700">
+                      <div className="flex h-10 w-10 shrink-0 flex-col items-center justify-center rounded-lg bg-violet-500/10 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300">
                         <span className="text-xs font-medium">
                           {date.toLocaleDateString("pt-BR", { day: "2-digit" })}
                         </span>
@@ -252,7 +252,7 @@ export default function DashboardPage() {
                         </p>
                       </div>
                       {isToday && (
-                        <Badge className="bg-violet-100 text-violet-700 hover:bg-violet-100">
+                        <Badge className="bg-violet-500/15 text-violet-700 hover:bg-violet-500/20 dark:text-violet-300">
                           Hoje
                         </Badge>
                       )}

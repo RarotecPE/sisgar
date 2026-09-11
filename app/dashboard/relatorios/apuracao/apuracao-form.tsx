@@ -724,7 +724,7 @@ export function ApuracaoForm({ relatorio }: Props) {
                             type="button"
                             size="sm"
                             variant="outline"
-                            className="h-7 border-amber-600 text-amber-800 hover:bg-amber-100"
+                            className="h-7 border-amber-500/40 text-amber-800 hover:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/40"
                             onClick={() => aplicarFracao(item.descricao, s.quantidadeSugerida)}
                           >
                             Aplicar fracao ({s.quantidadeSugerida.toLocaleString("pt-BR")})

@@ -635,7 +635,7 @@ export default function BatimentoPage() {
         <Card className="border shadow-sm">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
+              <div className="h-10 w-10 rounded-lg bg-blue-500/10 dark:bg-blue-500/15 flex items-center justify-center shrink-0">
                 <Calendar className="h-5 w-5 text-blue-600 dark:text-blue-400" />
               </div>
               <div className="min-w-0">
@@ -649,12 +649,12 @@ export default function BatimentoPage() {
         <Card className="border shadow-sm">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center shrink-0">
+              <div className="h-10 w-10 rounded-lg bg-emerald-500/10 dark:bg-emerald-500/15 flex items-center justify-center shrink-0">
                 <FileCheck className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
               </div>
               <div className="min-w-0">
                 <p className="text-xs font-medium text-muted-foreground">Com Relatório</p>
-                <p className="text-2xl font-bold text-emerald-600">{stats.comRelatorio}</p>
+                <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{stats.comRelatorio}</p>
               </div>
             </div>
           </CardContent>
@@ -663,12 +663,12 @@ export default function BatimentoPage() {
         <Card className="border shadow-sm">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center shrink-0">
+              <div className="h-10 w-10 rounded-lg bg-amber-500/10 dark:bg-amber-500/15 flex items-center justify-center shrink-0">
                 <FileX className="h-5 w-5 text-amber-600 dark:text-amber-400" />
               </div>
               <div className="min-w-0">
                 <p className="text-xs font-medium text-muted-foreground">Sem Relatório</p>
-                <p className="text-2xl font-bold text-amber-600">{stats.semRelatorio}</p>
+                <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">{stats.semRelatorio}</p>
               </div>
             </div>
           </CardContent>
@@ -677,12 +677,12 @@ export default function BatimentoPage() {
         <Card className="border shadow-sm">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center shrink-0">
+              <div className="h-10 w-10 rounded-lg bg-purple-500/10 dark:bg-purple-500/15 flex items-center justify-center shrink-0">
                 <TrendingUp className="h-5 w-5 text-purple-600 dark:text-purple-400" />
               </div>
               <div className="min-w-0">
                 <p className="text-xs font-medium text-muted-foreground">Conformidade</p>
-                <p className="text-2xl font-bold text-purple-600">{stats.taxaConformidade}%</p>
+                <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">{stats.taxaConformidade}%</p>
               </div>
             </div>
           </CardContent>
@@ -985,7 +985,7 @@ export default function BatimentoPage() {
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger>
-                          <Badge variant="secondary" className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100">
+                          <Badge variant="secondary" className="bg-emerald-500/15 text-emerald-700 hover:bg-emerald-500/20 dark:text-emerald-300">
                             {data.ok}
                           </Badge>
                         </TooltipTrigger>
@@ -996,7 +996,7 @@ export default function BatimentoPage() {
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger>
-                            <Badge variant="secondary" className="bg-amber-100 text-amber-700 hover:bg-amber-100">
+                            <Badge variant="secondary" className="bg-amber-500/15 text-amber-700 hover:bg-amber-500/20 dark:text-amber-300">
                               {data.pendente}
                             </Badge>
                           </TooltipTrigger>
@@ -1099,7 +1099,7 @@ export default function BatimentoPage() {
                         </TableCell>
                         <TableCell className="text-center">
                           {item.temRelatorio ? (
-                            <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100">
+                            <Badge className="bg-emerald-500/15 text-emerald-700 hover:bg-emerald-500/20 dark:text-emerald-300">
                               <CheckCircle2 className="h-3 w-3 mr-1" />
                               OK
                             </Badge>
@@ -1108,7 +1108,7 @@ export default function BatimentoPage() {
                             <TooltipProvider>
                               <Tooltip>
                                 <TooltipTrigger>
-                                  <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100">
+                                  <Badge className="bg-emerald-500/15 text-emerald-700 hover:bg-emerald-500/20 dark:text-emerald-300">
                                     <Link2 className="h-3 w-3 mr-1" />
                                     OK (grupo)
                                   </Badge>
@@ -1126,7 +1126,7 @@ export default function BatimentoPage() {
                             <TooltipProvider>
                               <Tooltip>
                                 <TooltipTrigger>
-                                  <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100">
+                                  <Badge className="bg-blue-500/15 text-blue-700 hover:bg-blue-500/20 dark:text-blue-300">
                                     <ShieldCheck className="h-3 w-3 mr-1" />
                                     Abonado
                                   </Badge>
@@ -1140,7 +1140,7 @@ export default function BatimentoPage() {
                             <TooltipProvider>
                               <Tooltip>
                                 <TooltipTrigger>
-                                  <Badge className="bg-violet-100 text-violet-700 hover:bg-violet-100">
+                                  <Badge className="bg-violet-500/15 text-violet-700 hover:bg-violet-500/20 dark:text-violet-300">
                                     <Link2 className="h-3 w-3 mr-1" />
                                     Agrupado
                                   </Badge>
@@ -1155,7 +1155,7 @@ export default function BatimentoPage() {
                               </Tooltip>
                             </TooltipProvider>
                           ) : (
-                            <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100">
+                            <Badge className="bg-amber-500/15 text-amber-700 hover:bg-amber-500/20 dark:text-amber-300">
                               <AlertTriangle className="h-3 w-3 mr-1" />
                               Pendente
                             </Badge>

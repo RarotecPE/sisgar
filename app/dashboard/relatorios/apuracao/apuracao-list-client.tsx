@@ -321,9 +321,9 @@ export function ApuracaoListClient() {
                     <TableCell className="text-right">{formatBRL(r.valor_total)}</TableCell>
                     <TableCell>
                       {r.status === "emitido" ? (
-                        <Badge className="bg-green-100 text-green-700 hover:bg-green-100">Emitido</Badge>
+                        <Badge className="bg-emerald-500/15 text-emerald-700 hover:bg-emerald-500/20 dark:text-emerald-300">Emitido</Badge>
                       ) : (
-                        <Badge variant="outline" className="text-amber-700">
+                        <Badge variant="outline" className="text-amber-700 dark:text-amber-300 dark:border-amber-500/40">
                           Rascunho
                         </Badge>
                       )}

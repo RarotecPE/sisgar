@@ -1490,8 +1490,8 @@ export default function NovoRelatorioPage() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-3 text-xl">
-              <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
-                <FileCheck className="h-5 w-5 text-green-600" />
+              <div className="h-10 w-10 rounded-full bg-emerald-500/10 dark:bg-emerald-500/15 flex items-center justify-center">
+                <FileCheck className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
               </div>
               Relatório Gerado com Sucesso!
             </DialogTitle>

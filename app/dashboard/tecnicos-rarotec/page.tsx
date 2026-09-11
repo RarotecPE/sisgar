@@ -219,8 +219,8 @@ export default function TecnicosRarotecPage() {
         </Card>
         <Card className="border shadow-sm">
           <CardContent className="flex items-center gap-4 p-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-100">
-              <UserCheck className="h-6 w-6 text-emerald-600" />
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/10 dark:bg-emerald-500/15">
+              <UserCheck className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
             </div>
             <div>
               <p className="text-2xl font-bold">{totalAtivos}</p>
@@ -230,8 +230,8 @@ export default function TecnicosRarotecPage() {
         </Card>
         <Card className="border shadow-sm">
           <CardContent className="flex items-center gap-4 p-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gray-100">
-              <UserX className="h-6 w-6 text-gray-600" />
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-500/10 dark:bg-slate-500/15">
+              <UserX className="h-6 w-6 text-slate-600 dark:text-slate-400" />
             </div>
             <div>
               <p className="text-2xl font-bold">{totalInativos}</p>
@@ -324,8 +324,8 @@ export default function TecnicosRarotecPage() {
                           variant="secondary"
                           className={
                             tecnico.ativo 
-                              ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-100" 
-                              : "bg-gray-100 text-gray-600 hover:bg-gray-100"
+                              ? "bg-emerald-500/15 text-emerald-700 hover:bg-emerald-500/20 dark:text-emerald-300" 
+                              : "bg-slate-500/15 text-slate-700 hover:bg-slate-500/20 dark:text-slate-300"
                           }
                         >
                           {tecnico.ativo ? "Ativo" : "Inativo"}

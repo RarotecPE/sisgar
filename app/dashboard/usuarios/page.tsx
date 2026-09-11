@@ -196,8 +196,8 @@ export default function UsuariosPage() {
         </Card>
         <Card className="border shadow-sm">
           <CardContent className="flex items-center gap-4 p-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-100 dark:bg-emerald-500/10">
-              <UserCheck className="h-6 w-6 text-emerald-600" />
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/10 dark:bg-emerald-500/15">
+              <UserCheck className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
             </div>
             <div>
               <p className="text-2xl font-bold">{totalAtivos}</p>
@@ -207,8 +207,8 @@ export default function UsuariosPage() {
         </Card>
         <Card className="border shadow-sm">
           <CardContent className="flex items-center gap-4 p-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-500/10">
-              <UserX className="h-6 w-6 text-slate-600 dark:text-slate-300" />
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-500/10 dark:bg-slate-500/15">
+              <UserX className="h-6 w-6 text-slate-600 dark:text-slate-400" />
             </div>
             <div>
               <p className="text-2xl font-bold">{totalInativos}</p>
@@ -294,8 +294,8 @@ export default function UsuariosPage() {
                         <Badge
                           variant="secondary"
                           className={usuario.ativo
-                            ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-300"
-                            : "bg-slate-100 text-slate-600 hover:bg-slate-100 dark:bg-slate-500/10 dark:text-slate-300"}
+                            ? "bg-emerald-500/15 text-emerald-700 hover:bg-emerald-500/20 dark:text-emerald-300"
+                            : "bg-slate-500/15 text-slate-700 hover:bg-slate-500/20 dark:text-slate-300"}
                         >
                           {usuario.ativo ? "Ativo" : "Inativo"}
                         </Badge>

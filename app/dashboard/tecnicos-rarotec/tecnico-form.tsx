@@ -280,7 +280,7 @@ export function TecnicoForm({ tecnico, onSuccess, onCancel }: TecnicoFormProps) 
                         </div>
                         <div className="flex items-center gap-1.5 shrink-0">
                           {cand.ja_cadastrado ? (
-                            <Badge variant="secondary" className="text-[10px] bg-amber-100 text-amber-800 hover:bg-amber-100">
+                            <Badge variant="secondary" className="text-[10px] bg-amber-500/15 text-amber-800 hover:bg-amber-500/20 dark:text-amber-300">
                               Já cadastrado
                             </Badge>
                           ) : cand.cargo ? (

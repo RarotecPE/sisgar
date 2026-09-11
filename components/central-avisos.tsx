@@ -476,7 +476,7 @@ export function CentralAvisos() {
                 <Button
                   size="sm"
                   variant="ghost"
-                  className="h-7 w-7 p-0 text-emerald-600 hover:bg-emerald-100 hover:text-emerald-700"
+                  className="h-7 w-7 p-0 text-emerald-600 hover:bg-emerald-500/15 hover:text-emerald-700 dark:text-emerald-400 dark:hover:bg-emerald-500/20 dark:hover:text-emerald-300"
                   onClick={() => responderSolicitacao(s.id, "aprovar")}
                 >
                   <Check className="h-4 w-4" />
@@ -484,7 +484,7 @@ export function CentralAvisos() {
                 <Button
                   size="sm"
                   variant="ghost"
-                  className="h-7 w-7 p-0 text-red-600 hover:bg-red-100 hover:text-red-700"
+                  className="h-7 w-7 p-0 text-rose-600 hover:bg-rose-500/15 hover:text-rose-700 dark:text-rose-400 dark:hover:bg-rose-500/20 dark:hover:text-rose-300"
                   onClick={() => responderSolicitacao(s.id, "rejeitar")}
                 >
                   <X className="h-4 w-4" />

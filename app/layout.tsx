@@ -18,7 +18,7 @@ export const viewport: Viewport = {
 }
 
 export const metadata: Metadata = {
-  title: 'SISGAR - Rarotec',
+  title: 'SISGAR',
   description: 'Sistema de Gestao Administrativa da Rarotec',
   generator: 'v0.app',
   icons: {

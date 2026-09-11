@@ -292,8 +292,8 @@ export default function ResponsabilidadesPage() {
       <div className="grid gap-4 sm:grid-cols-3">
         {[
           { label: "Atribuições", value: dados.length, icon: UserRoundCog, color: "text-primary bg-primary/10" },
-          { label: "Responsáveis principais", value: principais, icon: ShieldCheck, color: "text-emerald-700 bg-emerald-100" },
-          { label: "Exceções por órgão", value: excecoes, icon: Building2, color: "text-blue-700 bg-blue-100" },
+          { label: "Responsáveis principais", value: principais, icon: ShieldCheck, color: "text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 dark:bg-emerald-500/15" },
+          { label: "Exceções por órgão", value: excecoes, icon: Building2, color: "text-blue-600 dark:text-blue-400 bg-blue-500/10 dark:bg-blue-500/15" },
         ].map(({ label, value, icon: Icon, color }) => (
           <Card key={label} className="shadow-sm"><CardContent className="flex items-center gap-4 p-4">
             <div className={`flex h-11 w-11 items-center justify-center rounded-xl ${color}`}><Icon className="h-5 w-5" /></div>
@@ -303,19 +303,19 @@ export default function ResponsabilidadesPage() {
       </div>
 
       {gestor && (importacao.pendentes > 0 || importacao.ignorados > 0) && (
-        <Card className="border-amber-200 bg-amber-50/70 shadow-sm">
-          <CardContent className="flex flex-wrap items-start gap-3 p-4 text-amber-900">
-            <CircleAlert className="mt-0.5 h-5 w-5 shrink-0" />
+        <Card className="border-amber-500/30 bg-amber-500/10 shadow-sm">
+          <CardContent className="flex flex-wrap items-start gap-3 p-4 text-amber-900 dark:text-amber-200">
+            <CircleAlert className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
             <div className="min-w-0 flex-1">
               <p className="font-medium">A carga inicial possui registros que precisam de conferência</p>
-              <p className="mt-1 text-sm">
+              <p className="mt-1 text-sm text-amber-800/90 dark:text-amber-300/90">
                 {importacao.pendentes + importacao.ignorados} registro(s) precisam de conferência.
               </p>
             </div>
             {(importacao.pendentes > 0 || importacao.ignorados > 0) && (
               <Button
                 size="sm"
-                className="shrink-0 bg-amber-600 text-white hover:bg-amber-700"
+                className="shrink-0 bg-amber-600 text-white hover:bg-amber-700 dark:bg-amber-600 dark:hover:bg-amber-500"
                 onClick={() => setConciliacaoOpen(true)}
               >
                 Conciliar registros
@@ -363,7 +363,7 @@ export default function ResponsabilidadesPage() {
                 <TableCell>{item.modulo}</TableCell>
                 <TableCell>{item.orgao_nome ? <><p className="font-medium">{item.orgao_nome}</p><p className="text-xs text-muted-foreground">{item.orgao_tipo}</p></> : <><p className="font-medium">Todos por padrão</p><p className="text-xs text-muted-foreground">{item.orgaos_herdados} órgão(s) por herança</p></>}</TableCell>
                 <TableCell><p className="font-medium">{item.tecnico_nome}</p><p className="text-xs text-muted-foreground">{item.tecnico_email || "Sem e-mail"}</p></TableCell>
-                <TableCell><div className="flex flex-wrap items-center gap-1.5"><Badge variant="secondary" className={item.tipo_atribuicao === "principal" ? "bg-emerald-100 text-emerald-700" : "bg-blue-100 text-blue-700"}>{item.tipo_atribuicao === "principal" ? "Principal" : "Exceção"}</Badge>{item.nao_aplicavel && <Badge variant="outline" className="border-amber-300 text-amber-700">Não se aplica</Badge>}</div></TableCell>
+                <TableCell><div className="flex flex-wrap items-center gap-1.5"><Badge variant="secondary" className={item.tipo_atribuicao === "principal" ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/20" : "bg-blue-500/15 text-blue-700 dark:text-blue-300 hover:bg-blue-500/20"}>{item.tipo_atribuicao === "principal" ? "Principal" : "Exceção"}</Badge>{item.nao_aplicavel && <Badge variant="outline" className="border-amber-300 text-amber-700 dark:border-amber-500/40 dark:text-amber-300">Não se aplica</Badge>}</div></TableCell>
                 {gestor && <TableCell><DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuItem onClick={() => abrirEdicao(item)}><Pencil className="mr-2 h-4 w-4" />Editar</DropdownMenuItem>{item.tipo_atribuicao === "principal" && <DropdownMenuItem onClick={() => abrirExcecao(item)}><Building2 className="mr-2 h-4 w-4" />Criar exceção</DropdownMenuItem>}<DropdownMenuItem onClick={() => alternarNaoAplicavel(item)}><Ban className="mr-2 h-4 w-4" />{item.nao_aplicavel ? "Reativar (aplica-se)" : "Marcar como não se aplica"}</DropdownMenuItem><DropdownMenuSeparator /><DropdownMenuItem className="text-destructive" onClick={() => remover(item)}><Trash2 className="mr-2 h-4 w-4" />Remover</DropdownMenuItem></DropdownMenuContent></DropdownMenu></TableCell>}
               </TableRow>
             ))}

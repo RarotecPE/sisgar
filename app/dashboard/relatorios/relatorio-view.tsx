@@ -242,7 +242,7 @@ export function RelatorioView({ relatorioId }: RelatorioViewProps) {
           <Card className="border shadow-sm">
             <CardContent className="p-4">
               <div className="flex items-start gap-3">
-                <div className="h-9 w-9 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
+                <div className="h-9 w-9 rounded-lg bg-blue-500/10 dark:bg-blue-500/15 flex items-center justify-center shrink-0">
                   <MapPin className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                 </div>
                 <div className="min-w-0">
@@ -259,7 +259,7 @@ export function RelatorioView({ relatorioId }: RelatorioViewProps) {
           <Card className="border shadow-sm">
             <CardContent className="p-4">
               <div className="flex items-start gap-3">
-                <div className="h-9 w-9 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center shrink-0">
+                <div className="h-9 w-9 rounded-lg bg-emerald-500/10 dark:bg-emerald-500/15 flex items-center justify-center shrink-0">
                   <Calendar className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
                 </div>
                 <div className="min-w-0">
@@ -282,7 +282,7 @@ export function RelatorioView({ relatorioId }: RelatorioViewProps) {
           <Card className="border shadow-sm">
             <CardContent className="p-4">
               <div className="flex items-start gap-3">
-                <div className="h-9 w-9 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
+                <div className="h-9 w-9 rounded-lg bg-slate-500/10 dark:bg-slate-500/15 flex items-center justify-center shrink-0">
                   <Building2 className="h-5 w-5 text-slate-600 dark:text-slate-400" />
                 </div>
                 <div className="min-w-0">
@@ -303,7 +303,7 @@ export function RelatorioView({ relatorioId }: RelatorioViewProps) {
           <Card className="border shadow-sm">
             <CardContent className="p-4">
               <div className="flex items-start gap-3">
-                <div className="h-9 w-9 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center shrink-0">
+                <div className="h-9 w-9 rounded-lg bg-amber-500/10 dark:bg-amber-500/15 flex items-center justify-center shrink-0">
                   <Users className="h-5 w-5 text-amber-600 dark:text-amber-400" />
                 </div>
                 <div className="min-w-0 flex-1">
@@ -344,7 +344,7 @@ export function RelatorioView({ relatorioId }: RelatorioViewProps) {
           <Card className="border shadow-sm">
             <CardContent className="p-4">
               <div className="flex items-start gap-3">
-                <div className="h-9 w-9 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center shrink-0">
+                <div className="h-9 w-9 rounded-lg bg-purple-500/10 dark:bg-purple-500/15 flex items-center justify-center shrink-0">
                   <User className="h-5 w-5 text-purple-600 dark:text-purple-400" />
                 </div>
                 <div className="min-w-0 flex-1">

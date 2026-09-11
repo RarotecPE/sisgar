@@ -198,8 +198,8 @@ export default function ConfiguracoesPage() {
         </Card>
         <Card className="border shadow-sm">
           <CardContent className="flex items-center gap-4 p-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-100">
-              <Lock className="h-6 w-6 text-emerald-600" />
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/10 dark:bg-emerald-500/15">
+              <Lock className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
             </div>
             <div>
               <p className="text-sm font-medium">Segurança</p>
@@ -209,8 +209,8 @@ export default function ConfiguracoesPage() {
         </Card>
         <Card className="border shadow-sm">
           <CardContent className="flex items-center gap-4 p-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-100">
-              <Building2 className="h-6 w-6 text-blue-600" />
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-500/10 dark:bg-blue-500/15">
+              <Building2 className="h-6 w-6 text-blue-600 dark:text-blue-400" />
             </div>
             <div>
               <p className="text-sm font-medium">Empresa</p>
@@ -254,22 +254,22 @@ export default function ConfiguracoesPage() {
 
         {/* Zona de Perigo - Apenas para Administradores */}
         {isAdmin && (
-          <Card className="border-red-200 border-2 shadow-sm">
+          <Card className="border-rose-500/20 dark:border-rose-500/30 border-2 shadow-sm">
             <CardHeader className="pb-4">
               <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-red-100">
-                  <ShieldAlert className="h-5 w-5 text-red-600" />
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-rose-500/10 dark:bg-rose-500/15">
+                  <ShieldAlert className="h-5 w-5 text-rose-600 dark:text-rose-400" />
                 </div>
                 <div>
-                  <CardTitle className="text-base font-medium text-red-700">Zona de Perigo</CardTitle>
-                  <CardDescription className="text-red-600/80">
+                  <CardTitle className="text-base font-medium text-rose-700 dark:text-rose-400">Zona de Perigo</CardTitle>
+                  <CardDescription className="text-rose-600/80 dark:text-rose-400/80">
                     Ações irreversiveis - Apenas para administradores
                   </CardDescription>
                 </div>
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              <Alert variant="destructive" className="bg-red-50 border-red-200">
+              <Alert variant="destructive" className="bg-rose-500/10 border-rose-500/30 text-rose-800 dark:text-rose-300">
                 <AlertTriangle className="h-4 w-4" />
                 <AlertTitle>Atenção!</AlertTitle>
                 <AlertDescription>
@@ -453,15 +453,15 @@ export default function ConfiguracoesPage() {
                         <div>
                           <p className="text-sm font-medium mb-2">Usuários:</p>
                           <div className="grid grid-cols-3 gap-2 text-sm">
-                            <div className="text-center p-2 rounded bg-green-100 text-green-700">
+                            <div className="text-center p-2 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
                               <p className="font-bold">{seedResultado.resultados.usuarios.criados}</p>
                               <p className="text-xs">Criados</p>
                             </div>
-                            <div className="text-center p-2 rounded bg-blue-100 text-blue-700">
+                            <div className="text-center p-2 rounded bg-blue-500/15 text-blue-700 dark:text-blue-300">
                               <p className="font-bold">{seedResultado.resultados.usuarios.existentes}</p>
                               <p className="text-xs">Existentes</p>
                             </div>
-                            <div className="text-center p-2 rounded bg-red-100 text-red-700">
+                            <div className="text-center p-2 rounded bg-rose-500/15 text-rose-700 dark:text-rose-300">
                               <p className="font-bold">{seedResultado.resultados.usuarios.erros}</p>
                               <p className="text-xs">Erros</p>
                             </div>
@@ -470,15 +470,15 @@ export default function ConfiguracoesPage() {
                         <div>
                           <p className="text-sm font-medium mb-2">Técnicos Rarotec:</p>
                           <div className="grid grid-cols-3 gap-2 text-sm">
-                            <div className="text-center p-2 rounded bg-green-100 text-green-700">
+                            <div className="text-center p-2 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
                               <p className="font-bold">{seedResultado.resultados.tecnicos.criados}</p>
                               <p className="text-xs">Criados</p>
                             </div>
-                            <div className="text-center p-2 rounded bg-blue-100 text-blue-700">
+                            <div className="text-center p-2 rounded bg-blue-500/15 text-blue-700 dark:text-blue-300">
                               <p className="font-bold">{seedResultado.resultados.tecnicos.existentes}</p>
                               <p className="text-xs">Existentes</p>
                             </div>
-                            <div className="text-center p-2 rounded bg-red-100 text-red-700">
+                            <div className="text-center p-2 rounded bg-rose-500/15 text-rose-700 dark:text-rose-300">
                               <p className="font-bold">{seedResultado.resultados.tecnicos.erros}</p>
                               <p className="text-xs">Erros</p>
                             </div>

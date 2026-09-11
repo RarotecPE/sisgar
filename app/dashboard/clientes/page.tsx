@@ -307,8 +307,8 @@ export default function ClientesPage() {
         </Card>
         <Card>
           <CardContent className="flex items-center gap-4 p-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-100">
-              <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-500/10 dark:bg-emerald-500/15">
+              <CheckCircle2 className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
             </div>
             <div>
               <p className="text-2xl font-semibold">{totalAtivos}</p>
@@ -318,8 +318,8 @@ export default function ClientesPage() {
         </Card>
         <Card>
           <CardContent className="flex items-center gap-4 p-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-100">
-              <XCircle className="h-5 w-5 text-gray-600" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-500/10 dark:bg-slate-500/15">
+              <XCircle className="h-5 w-5 text-slate-600 dark:text-slate-400" />
             </div>
             <div>
               <p className="text-2xl font-semibold">{totalInativos}</p>
@@ -418,8 +418,8 @@ export default function ClientesPage() {
                           variant="secondary"
                           className={
                             cliente.ativo 
-                              ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-100" 
-                              : "bg-gray-100 text-gray-600 hover:bg-gray-100"
+                              ? "bg-emerald-500/15 text-emerald-700 hover:bg-emerald-500/20 dark:text-emerald-300" 
+                              : "bg-slate-500/15 text-slate-700 hover:bg-slate-500/20 dark:text-slate-300"
                           }
                         >
                           {cliente.ativo ? "Ativo" : "Inativo"}

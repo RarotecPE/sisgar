@@ -282,10 +282,10 @@ export default function AnexosMedicosPage() {
               {acaoNecessaria.map((doc) => (
                 <div
                   key={doc.id}
-                  className="flex flex-col gap-2 rounded-md bg-blue-100/50 px-3 py-2 text-sm sm:flex-row sm:items-center sm:justify-between"
+                  className="flex flex-col gap-2 rounded-md bg-blue-500/10 px-3 py-2 text-sm sm:flex-row sm:items-center sm:justify-between"
                 >
-                  <div className="flex items-center gap-2 text-blue-900">
-                    <Badge variant="outline" className="border-blue-300 text-blue-700">
+                  <div className="flex items-center gap-2 text-blue-900 dark:text-blue-200">
+                    <Badge variant="outline" className="border-blue-500/30 text-blue-700 dark:text-blue-300">
                       {LABEL_TIPO_MEDICO[doc.tipo] || doc.tipo}
                     </Badge>
                     <Badge
@@ -296,12 +296,12 @@ export default function AnexosMedicosPage() {
                     >
                       {(STATUS_VALIDACAO[doc.status_validacao || "pendente"] || STATUS_VALIDACAO.pendente).label}
                     </Badge>
-                    <span className="text-blue-600">{formatarData(doc.data_inicio)}</span>
+                    <span className="text-blue-600 dark:text-blue-400">{formatarData(doc.data_inicio)}</span>
                   </div>
                   <Button
                     size="sm"
                     variant="outline"
-                    className="border-blue-300 text-blue-700 hover:bg-blue-100"
+                    className="border-blue-500/30 text-blue-700 hover:bg-blue-500/15 dark:text-blue-300"
                     onClick={() => {
                       setDocSelecionado(doc)
                       setDetalheOpen(true)
@@ -319,13 +319,13 @@ export default function AnexosMedicosPage() {
 
       {/* Pendências (sem anexo) */}
       {pendencias && pendencias.length > 0 && (
-        <Card className="mb-6 border-red-200 bg-red-50/50">
+        <Card className="mb-6 border-rose-500/20 bg-rose-500/5">
           <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-base text-red-900">
-              <AlertTriangle className="h-5 w-5 text-red-600" />
+            <CardTitle className="flex items-center gap-2 text-base text-rose-900 dark:text-rose-200">
+              <AlertTriangle className="h-5 w-5 text-rose-600 dark:text-rose-400" />
               Documentação Pendente ({pendencias.length})
             </CardTitle>
-            <CardDescription className="text-red-700">
+            <CardDescription className="text-rose-700 dark:text-rose-300">
               Eventos médicos na agenda ainda sem documento anexado
             </CardDescription>
           </CardHeader>
@@ -334,19 +334,19 @@ export default function AnexosMedicosPage() {
               {pendencias.slice(0, 8).map((p) => (
                 <div
                   key={p.id}
-                  className="flex flex-col gap-2 rounded-md bg-red-100/50 px-3 py-2 text-sm sm:flex-row sm:items-center sm:justify-between"
+                  className="flex flex-col gap-2 rounded-md bg-rose-500/10 px-3 py-2 text-sm sm:flex-row sm:items-center sm:justify-between"
                 >
-                  <div className="flex items-center gap-2 text-red-900">
-                    <Badge variant="outline" className="border-red-300 text-red-700">
+                  <div className="flex items-center gap-2 text-rose-900 dark:text-rose-200">
+                    <Badge variant="outline" className="border-rose-500/30 text-rose-700 dark:text-rose-300">
                       {LABEL_TIPO_MEDICO[p.tipo] || p.tipo}
                     </Badge>
                     {userIsGestor && <span className="font-medium">{p.tecnico_nome}</span>}
-                    <span className="text-red-600">{formatarData(p.data_inicio)}</span>
+                    <span className="text-rose-600 dark:text-rose-400">{formatarData(p.data_inicio)}</span>
                   </div>
                   <Button
                     size="sm"
                     variant="outline"
-                    className="border-red-300 text-red-700 hover:bg-red-100"
+                    className="border-rose-500/30 text-rose-700 hover:bg-rose-500/15 dark:text-rose-300"
                     onClick={() => anexarParaPendencia(p)}
                   >
                     <Paperclip className="mr-1 h-3.5 w-3.5" />
@@ -429,7 +429,7 @@ export default function AnexosMedicosPage() {
                             .label}
                         </Badge>
                       ) : (
-                        <Badge className="bg-red-100 text-red-700 hover:bg-red-100">Sem anexo</Badge>
+                        <Badge className="bg-rose-500/15 text-rose-700 hover:bg-rose-500/20 dark:text-rose-300">Sem anexo</Badge>
                       )}
                     </div>
                     <p className="mt-0.5 text-sm text-muted-foreground">
