@@ -15,7 +15,6 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { TecnicoClienteForm } from "./tecnico-cliente-form"
 import { ExportButton } from "@/components/export-button"
-import { exportToExcel, exportToPDF } from "@/lib/export-utils"
 import { toast } from "sonner"
 import type { TecnicoCliente } from "@/lib/types"
 
@@ -96,8 +95,9 @@ export default function TecnicosClientesPage() {
   }
 
   // Funções de exportação
-  const handleExportExcel = () => {
+  const handleExportExcel = async () => {
     if (!filteredTecnicos) return
+    const { exportToExcel } = await import("@/lib/export-utils")
     exportToExcel({
       filename: "tecnicos-clientes",
       title: "Lista de Técnicos dos Clientes",
@@ -117,8 +117,9 @@ export default function TecnicosClientesPage() {
     })
   }
 
-  const handleExportPDF = () => {
+  const handleExportPDF = async () => {
     if (!filteredTecnicos) return
+    const { exportToPDF } = await import("@/lib/export-utils")
     exportToPDF({
       filename: "tecnicos-clientes",
       title: "Lista de Técnicos dos Clientes",

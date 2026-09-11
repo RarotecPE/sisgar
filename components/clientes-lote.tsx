@@ -1,7 +1,6 @@
 "use client"
 
 import { useRef, useState } from "react"
-import * as XLSX from "xlsx"
 import { FileDown, Upload, Loader2, CheckCircle2, AlertCircle, FileSpreadsheet, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -83,7 +82,8 @@ export function ClientesLote({ onImported, disabled }: ClientesLoteProps) {
   const inputRef = useRef<HTMLInputElement>(null)
 
   // Gera e baixa a planilha-modelo (layout) esperada pela importacao em lote.
-  const baixarLayout = () => {
+  const baixarLayout = async () => {
+    const XLSX = await import("xlsx")
     const cabecalho = COLUNAS.map((c) => c.header)
     const exemplo = [
       "PREFEITURA MUNICIPAL DE EXEMPLO",
@@ -129,6 +129,7 @@ export function ClientesLote({ onImported, disabled }: ClientesLoteProps) {
     setResultado(null)
     setParseError("")
     try {
+      const XLSX = await import("xlsx")
       const buffer = await file.arrayBuffer()
       const wb = XLSX.read(buffer, { type: "array" })
       const ws = wb.Sheets[wb.SheetNames[0]]

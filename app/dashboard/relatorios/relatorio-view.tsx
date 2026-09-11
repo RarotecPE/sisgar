@@ -22,7 +22,6 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import type { RelatorioVisita } from "@/lib/types"
-import { generateRelatorioPDF, downloadPDF } from "@/lib/pdf-generator"
 import { useSession } from "@/lib/auth-context"
 import { EnviarEmailDialog } from "@/components/enviar-email-dialog"
 
@@ -156,6 +155,7 @@ export function RelatorioView({ relatorioId }: RelatorioViewProps) {
         usuarioDownload: user?.nome || "Usuário do Sistema",
       }
       
+      const { generateRelatorioPDF, downloadPDF } = await import("@/lib/pdf-generator")
       const blob = await generateRelatorioPDF(pdfData)
       const dataBase = relatorio.data_visita || relatorio.data_relatorio || new Date().toISOString()
       const dataFormatada = new Date(dataBase).toISOString().split("T")[0]

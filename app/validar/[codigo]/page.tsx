@@ -26,8 +26,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { generateRelatorioPDF, downloadPDF } from "@/lib/pdf-generator"
-import { generateApuracaoPDF, type ApuracaoPdfData } from "@/lib/apuracao-pdf-generator"
+import type { ApuracaoPdfData } from "@/lib/apuracao-pdf-generator"
 import { competenciaLabel, formatBRL } from "@/lib/apuracao"
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json())
@@ -207,6 +206,7 @@ export default function ValidarCodigoPage({ params }: { params: Promise<{ codigo
         usuarioDownload: "Validação Externa",
       }
       
+      const { generateRelatorioPDF, downloadPDF } = await import("@/lib/pdf-generator")
       const blob = await generateRelatorioPDF(pdfData)
       const dataFormatada = new Date(rel.data_visita || rel.data_relatório).toISOString().split("T")[0]
       const filename = `relatório-${rel.municipio?.toLowerCase().replace(/\s+/g, "-") || "visita"}-${dataFormatada}.pdf`
@@ -496,6 +496,10 @@ function ApuracaoValidacaoCard({ apuracao }: { apuracao: ApuracaoValidada }) {
         clientes_nomes: apuracao.cliente_nome ? [apuracao.cliente_nome] : [],
       } as unknown as ApuracaoPdfData
 
+      const [{ generateApuracaoPDF }, { downloadPDF }] = await Promise.all([
+        import("@/lib/apuracao-pdf-generator"),
+        import("@/lib/pdf-generator"),
+      ])
       const blob = await generateApuracaoPDF(pdfData)
       downloadPDF(blob, `rmps-${apuracao.exercicio}-${apuracao.numero_texto}-${apuracao.id}.pdf`)
     } catch (error) {

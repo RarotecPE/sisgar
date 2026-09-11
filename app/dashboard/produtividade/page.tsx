@@ -12,7 +12,6 @@ import { Progress } from "@/components/ui/progress"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { FiltroCompetencia, MESES as meses, periodoParaQuery, type Periodo } from "@/components/filtro-competencia"
-import { exportToExcel, exportProdutividadePDF } from "@/lib/export-utils"
 
 interface GrupoProdutividade {
   id?: number
@@ -127,7 +126,8 @@ export default function ProdutividadePage() {
     return `${meses[m - 1]} de ${a}`
   }
 
-  function exportar(tipo: "excel" | "pdf") {
+  async function exportar(tipo: "excel" | "pdf") {
+    const { exportToExcel, exportProdutividadePDF } = await import("@/lib/export-utils")
     const inicio = resultado.inicio ?? resultado.competencia
     const fim = resultado.fim ?? resultado.competencia
     const periodoLabel = inicio === fim ? rotuloCompetencia(inicio) : `${rotuloCompetencia(inicio)} a ${rotuloCompetencia(fim)}`

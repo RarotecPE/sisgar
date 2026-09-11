@@ -41,7 +41,6 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { TecnicoForm } from "./tecnico-form"
 import { ExportButton } from "@/components/export-button"
-import { exportToExcel, exportToPDF } from "@/lib/export-utils"
 import type { TecnicoRarotec } from "@/lib/types"
 import { useSession } from "@/lib/auth-context"
 import { isGestor } from "@/lib/permissions"
@@ -115,7 +114,8 @@ export default function TecnicosRarotecPage() {
   }
 
   // Funções de exportação
-  const handleExportExcel = () => {
+  const handleExportExcel = async () => {
+    const { exportToExcel } = await import("@/lib/export-utils")
     exportToExcel({
       filename: "tecnicos-rarotec",
       title: "Lista de Técnicos Rarotec",
@@ -134,7 +134,8 @@ export default function TecnicosRarotecPage() {
     })
   }
 
-  const handleExportPDF = () => {
+  const handleExportPDF = async () => {
+    const { exportToPDF } = await import("@/lib/export-utils")
     exportToPDF({
       filename: "tecnicos-rarotec",
       title: "Lista de Técnicos Rarotec",

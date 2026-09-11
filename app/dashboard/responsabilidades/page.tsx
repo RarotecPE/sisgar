@@ -20,7 +20,6 @@ import { ClienteCombobox } from "@/components/cliente-combobox"
 import { ConciliacaoResponsaveisDialog } from "@/components/conciliacao-responsaveis-dialog"
 import { Autocomplete } from "@/components/ui/autocomplete"
 import { ExportButton } from "@/components/export-button"
-import { exportToExcel, exportToPDF } from "@/lib/export-utils"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -273,7 +272,8 @@ export default function ResponsabilidadesPage() {
     nao_aplicavel: item.nao_aplicavel ? "Sim" : "Não",
   }))
 
-  function exportar(tipo: "excel" | "pdf") {
+  async function exportar(tipo: "excel" | "pdf") {
+    const { exportToExcel, exportToPDF } = await import("@/lib/export-utils")
     const config = {
       filename: "responsaveis-por-cliente-e-modulo",
       title: "Responsáveis por Cliente e Módulo",

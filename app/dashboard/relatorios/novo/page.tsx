@@ -54,7 +54,6 @@ import {
 } from "lucide-react"
 import { MunicipioCombobox } from "@/components/municipio-combobox"
 import type { TecnicoRarotec, Cliente } from "@/lib/types"
-import { generateRelatorioPDF, downloadPDF } from "@/lib/pdf-generator"
 import { useSession } from "@/lib/auth-context"
 import { EnviarEmailDialog } from "@/components/enviar-email-dialog"
 
@@ -1547,6 +1546,7 @@ export default function NovoRelatorioPage() {
                   usuarioDownload: user?.nome || "Usuário do Sistema",
                 }
                 
+                const { generateRelatorioPDF, downloadPDF } = await import("@/lib/pdf-generator")
                 const blob = await generateRelatorioPDF(pdfData)
                 const dataFilename = dataServico.toISOString().split("T")[0]
                 const clienteNome = clienteSelecionado?.nome_fantasia || clienteSelecionado?.razao_social || "sem-cliente"

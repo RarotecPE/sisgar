@@ -57,8 +57,6 @@ import {
   formatBRL,
   type ApuracaoRelatorio,
 } from "@/lib/apuracao"
-import { generateApuracaoPDF } from "@/lib/apuracao-pdf-generator"
-import { downloadPDF } from "@/lib/pdf-generator"
 import { toast } from "sonner"
 
 const fetcher = async (url: string) => {
@@ -89,6 +87,10 @@ export function ApuracaoListClient() {
   async function baixarPdf(id: number) {
     setBaixandoId(id)
     try {
+      const [{ generateApuracaoPDF }, { downloadPDF }] = await Promise.all([
+        import("@/lib/apuracao-pdf-generator"),
+        import("@/lib/pdf-generator"),
+      ])
       const res = await fetch(`/api/apuracao/relatorios/${id}`)
       if (!res.ok) throw new Error()
       const full = await res.json()

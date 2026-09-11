@@ -60,9 +60,7 @@ import {
 import { RelatorioView } from "./relatorio-view"
 import { EnviarEmailDialog } from "@/components/enviar-email-dialog"
 import type { RelatorioVisita } from "@/lib/types"
-import { generateRelatorioPDF, downloadPDF } from "@/lib/pdf-generator"
 import { ExportButton } from "@/components/export-button"
-import { exportToExcel, exportToPDF } from "@/lib/export-utils"
 import { useSession } from "@/lib/auth-context"
 import { isGestor } from "@/lib/permissions"
 import { toast } from "sonner"
@@ -216,8 +214,9 @@ export default function RelatoriosPage() {
   }
 
   // Funções de exportação da lista de relatórios
-  const handleExportExcel = () => {
+  const handleExportExcel = async () => {
     if (!filteredRelatorios) return
+    const { exportToExcel } = await import("@/lib/export-utils")
     exportToExcel({
       filename: "relatorios-visita",
       title: "Lista de Relatórios de Visita - Rarotec",
@@ -239,8 +238,9 @@ export default function RelatoriosPage() {
     })
   }
 
-  const handleExportPDFList = () => {
+  const handleExportPDFList = async () => {
     if (!filteredRelatorios) return
+    const { exportToPDF } = await import("@/lib/export-utils")
     exportToPDF({
       filename: "relatorios-visita",
       title: "Lista de Relatórios de Visita - Rarotec",
@@ -354,6 +354,7 @@ export default function RelatoriosPage() {
         usuarioDownload: user?.nome || "Usuário do Sistema",
       }
       
+      const { generateRelatorioPDF, downloadPDF } = await import("@/lib/pdf-generator")
       const blob = await generateRelatorioPDF(pdfData)
       const dataFormatada = new Date(fullRelatorio.data_visita || fullRelatorio.data_relatorio).toISOString().split("T")[0]
       const clienteNome = fullRelatorio.cliente_nome || fullRelatorio.municipio || "relatorio"
