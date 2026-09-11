@@ -102,22 +102,42 @@ export default function ConfiguracaoChecklistPage() {
   }
 
   async function alternar(item: ChecklistModeloItem, ativo: boolean) {
-    const response = await fetch("/api/checklists/modelos", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...item, ativo }),
-    })
-    if (!response.ok) return toast.error("Não foi possível alterar o item")
-    toast.success(ativo ? "Item reativado" : "Item desativado")
-    carregar()
+    const prevItens = itens
+    setItens((prev) => prev.map((i) => (i.id === item.id ? { ...i, ativo } : i)))
+    try {
+      const response = await fetch("/api/checklists/modelos", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...item, ativo }),
+      })
+      if (!response.ok) {
+        setItens(prevItens)
+        return toast.error("Não foi possível alterar o item")
+      }
+      toast.success(ativo ? "Item reativado" : "Item desativado")
+      carregar()
+    } catch {
+      setItens(prevItens)
+      toast.error("Não foi possível alterar o item")
+    }
   }
 
   async function desativar(item: ChecklistModeloItem) {
     if (!confirm("Desativar este item para as próximas competências? O histórico será preservado.")) return
-    const response = await fetch(`/api/checklists/modelos?id=${item.id}`, { method: "DELETE" })
-    if (!response.ok) return toast.error("Não foi possível desativar")
-    toast.success("Item desativado")
-    carregar()
+    const prevItens = itens
+    setItens((prev) => prev.map((i) => (i.id === item.id ? { ...i, ativo: false } : i)))
+    try {
+      const response = await fetch(`/api/checklists/modelos?id=${item.id}`, { method: "DELETE" })
+      if (!response.ok) {
+        setItens(prevItens)
+        return toast.error("Não foi possível desativar")
+      }
+      toast.success("Item desativado")
+      carregar()
+    } catch {
+      setItens(prevItens)
+      toast.error("Não foi possível desativar")
+    }
   }
 
   return <div className="space-y-6 p-6 lg:p-8">

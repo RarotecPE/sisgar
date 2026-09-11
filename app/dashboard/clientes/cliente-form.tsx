@@ -34,9 +34,10 @@ interface Municipio {
 interface ClienteFormProps {
   cliente: Cliente | null
   onClose: () => void
+  onSuccess?: (saved?: Cliente) => void
 }
 
-export function ClienteForm({ cliente, onClose }: ClienteFormProps) {
+export function ClienteForm({ cliente, onClose, onSuccess }: ClienteFormProps) {
   const [loading, setLoading] = useState(false)
   const [buscandoCnpj, setBuscandoCnpj] = useState(false)
   const [cnpjStatus, setCnpjStatus] = useState<"idle" | "success" | "error">("idle")
@@ -172,15 +173,26 @@ export function ClienteForm({ cliente, onClose }: ClienteFormProps) {
       const url = cliente ? `/api/clientes/${cliente.id}` : "/api/clientes"
       const method = cliente ? "PUT" : "POST"
 
-      await fetch(url, {
+      const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(dataToSend),
       })
 
-      onClose()
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => null)
+        throw new Error(errorData?.error || "Erro ao salvar cliente")
+      }
+
+      const saved = await res.json().catch(() => null)
+      if (onSuccess) {
+        onSuccess(saved)
+      } else {
+        onClose()
+      }
     } catch (error) {
       console.error("Erro ao salvar cliente:", error)
+      alert(error instanceof Error ? error.message : "Erro ao salvar cliente")
     } finally {
       setLoading(false)
     }

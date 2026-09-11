@@ -65,8 +65,14 @@ import { ExportButton } from "@/components/export-button"
 import { exportToExcel, exportToPDF } from "@/lib/export-utils"
 import { useSession } from "@/lib/auth-context"
 import { isGestor } from "@/lib/permissions"
+import { toast } from "sonner"
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json())
+const fetcher = async (url: string) => {
+  const res = await fetch(url, { cache: "no-store" })
+  const data = await res.json().catch(() => null)
+  if (!res.ok) throw new Error(data?.error || "Erro ao carregar relatórios")
+  return data
+}
 
 export default function RelatoriosPage() {
   const { user } = useSession()
@@ -184,12 +190,29 @@ export default function RelatoriosPage() {
 
   const handleDelete = async (id: number) => {
     if (!isAdmin) {
-      alert("Apenas administradores podem excluir relatórios.")
+      toast.error("Apenas administradores podem excluir relatórios.")
       return
     }
     if (!confirm("Tem certeza que deseja excluir este relatório?")) return
-    await fetch(`/api/relatorios/${id}`, { method: "DELETE" })
-    mutate()
+
+    const previousRelatorios = relatorios ?? []
+    mutate(
+      previousRelatorios.filter((r) => r.id !== id),
+      false
+    )
+
+    try {
+      const res = await fetch(`/api/relatorios/${id}`, { method: "DELETE" })
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}))
+        throw new Error(errorData.error || "Erro ao excluir relatório")
+      }
+      toast.success("Relatório excluído com sucesso")
+      await mutate()
+    } catch (err) {
+      mutate(previousRelatorios, false)
+      toast.error(err instanceof Error ? err.message : "Erro ao excluir relatório")
+    }
   }
 
   // Funções de exportação da lista de relatórios

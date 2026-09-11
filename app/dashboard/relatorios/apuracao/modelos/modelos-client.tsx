@@ -60,8 +60,14 @@ import {
   type ApuracaoItemServico,
   type ApuracaoModoValor,
 } from "@/lib/apuracao"
+import { toast } from "sonner"
 
-const fetcher = (url: string) => fetch(url).then((r) => r.json())
+const fetcher = async (url: string) => {
+  const res = await fetch(url, { cache: "no-store" })
+  const data = await res.json().catch(() => null)
+  if (!res.ok) throw new Error(data?.error || "Erro ao carregar dados")
+  return data
+}
 
 const emptyForm = {
   municipio: "",
@@ -234,9 +240,27 @@ export function ModelosClient() {
 
   async function excluir() {
     if (!excluirId) return
-    await fetch(`/api/apuracao/modelos/${excluirId}`, { method: "DELETE" })
+    const id = excluirId
     setExcluirId(null)
-    mutate()
+    const prev = modelos ?? []
+    mutate(
+      prev.filter((m: ApuracaoModelo) => m.id !== id),
+      false
+    )
+
+    try {
+      const res = await fetch(`/api/apuracao/modelos/${id}`, { method: "DELETE" })
+      if (!res.ok) {
+        mutate(prev, false)
+        const errData = await res.json().catch(() => ({}))
+        throw new Error(errData.error || "Erro ao excluir modelo")
+      }
+      toast.success("Modelo excluído com sucesso")
+      await mutate()
+    } catch (e) {
+      mutate(prev, false)
+      toast.error(e instanceof Error ? e.message : "Erro ao excluir modelo")
+    }
   }
 
   // Liga/desliga a emissao automatica direto do card (atualizacao otimista)

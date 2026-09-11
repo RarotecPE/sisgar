@@ -88,6 +88,7 @@ import {
   addDays
 } from "date-fns"
 import { ptBR } from "date-fns/locale"
+import { toast } from "sonner"
 
 interface Evento {
   id: number
@@ -121,7 +122,12 @@ interface Cliente {
   ativo: boolean
 }
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json())
+const fetcher = async (url: string) => {
+  const res = await fetch(url, { cache: "no-store" })
+  const data = await res.json().catch(() => null)
+  if (!res.ok) throw new Error(data?.error || "Erro ao carregar dados")
+  return data
+}
 
 // Helper para obter nome + sobrenome (evita duplicatas como "Felipe" e "Felipe")
 const getNomeSobrenome = (nomeCompleto: string) => {
@@ -526,7 +532,7 @@ export default function AgendaPage() {
       const url = selectedEvento ? `/api/agenda/${selectedEvento.id}` : "/api/agenda"
       const method = selectedEvento ? "PUT" : "POST"
 
-      await fetch(url, {
+      const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -538,11 +544,36 @@ export default function AgendaPage() {
           status: "agendado",
         }),
       })
-      mutate()
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}))
+        throw new Error(errorData.error || "Erro ao salvar agendamento")
+      }
+
+      const saved = await res.json().catch(() => null)
+      const isEditing = Boolean(selectedEvento)
+      if (saved && saved.id) {
+        const tecnicoObj = tecnicosAtivos.find((t) => t.id === parseInt(formData.tecnico_rarotec_id))
+        const enriched = {
+          ...saved,
+          tecnico_nome: tecnicoObj?.nome || saved.tecnico_nome || null,
+          cliente_nome: clienteSelecionado?.nome_fantasia || clienteSelecionado?.razao_social || saved.cliente_nome || null,
+        }
+
+        if (isEditing) {
+          mutate((eventos ?? []).map((e) => (e.id === saved.id ? { ...e, ...enriched } : e)), false)
+        } else {
+          mutate([...(eventos ?? []), enriched], false)
+        }
+      }
+
+      toast.success(isEditing ? "Agendamento atualizado com sucesso" : "Agendamento criado com sucesso")
       setIsFormOpen(false)
       resetForm()
+      await mutate()
     } catch (error) {
       console.error("Erro ao salvar evento:", error)
+      toast.error(error instanceof Error ? error.message : "Erro ao salvar agendamento")
     } finally {
       setLoading(false)
     }
@@ -550,13 +581,28 @@ export default function AgendaPage() {
 
   const handleDelete = async (id: number) => {
     if (!confirm("Deseja realmente excluir este agendamento?")) return
+
+    const previousEventos = eventos ?? []
+    mutate(
+      previousEventos.filter((e) => e.id !== id),
+      false
+    )
+
     try {
-      await fetch(`/api/agenda/${id}`, { method: "DELETE" })
-      mutate()
+      const res = await fetch(`/api/agenda/${id}`, { method: "DELETE" })
+      if (!res.ok) {
+        mutate(previousEventos, false)
+        const errorData = await res.json().catch(() => ({}))
+        throw new Error(errorData.error || "Erro ao excluir agendamento")
+      }
+      toast.success("Agendamento excluído com sucesso")
       setIsFormOpen(false)
       resetForm()
+      await mutate()
     } catch (error) {
+      mutate(previousEventos, false)
       console.error("Erro ao excluir evento:", error)
+      toast.error(error instanceof Error ? error.message : "Erro ao excluir agendamento")
     }
   }
 

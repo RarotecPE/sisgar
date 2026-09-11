@@ -45,6 +45,7 @@ import {
 } from "lucide-react"
 import { useSession } from "@/lib/auth-context"
 import { isGestor } from "@/lib/permissions"
+import { toast } from "sonner"
 
 interface Usuario {
   id: number
@@ -126,7 +127,7 @@ export default function UsuariosPage() {
   const handleSubmit = async () => {
     if (!editingUser) return
     if (isTargetAdmin(editingUser) && !userIsAdmin) {
-      alert("Apenas administradores podem editar outros administradores.")
+      toast.error("Apenas administradores podem editar outros administradores.")
       return
     }
 
@@ -146,10 +147,11 @@ export default function UsuariosPage() {
       })
       const data = await response.json().catch(() => null)
       if (!response.ok) throw new Error(data?.error || "Erro ao salvar usuário.")
-      await mutate()
+      toast.success("Usuário salvo com sucesso")
       setIsFormOpen(false)
+      await mutate()
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Erro ao salvar usuário.")
+      toast.error(err instanceof Error ? err.message : "Erro ao salvar usuário.")
     } finally {
       setLoading(false)
     }
@@ -157,17 +159,26 @@ export default function UsuariosPage() {
 
   const handleDelete = async (usuario: Usuario) => {
     if (!canEditUser(usuario)) {
-      alert("Apenas administradores podem excluir outros administradores.")
+      toast.error("Apenas administradores podem excluir outros administradores.")
       return
     }
     if (!confirm("Deseja realmente excluir esta configuração local de usuário? O login no RaroNexus não será removido.")) return
+
+    const previousUsuarios = usuarios ?? []
+    mutate(
+      previousUsuarios.filter((u) => u.id !== usuario.id),
+      false
+    )
+
     try {
       const response = await fetch(`/api/usuarios/${usuario.id}`, { method: "DELETE" })
       const data = await response.json().catch(() => null)
       if (!response.ok) throw new Error(data?.error || "Erro ao excluir usuário.")
+      toast.success("Configuração de usuário excluída com sucesso")
       await mutate()
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Erro ao excluir usuário.")
+      mutate(previousUsuarios, false)
+      toast.error(err instanceof Error ? err.message : "Erro ao excluir usuário.")
     }
   }
 

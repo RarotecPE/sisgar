@@ -45,9 +45,10 @@ import { exportToExcel, exportToPDF } from "@/lib/export-utils"
 import type { TecnicoRarotec } from "@/lib/types"
 import { useSession } from "@/lib/auth-context"
 import { isGestor } from "@/lib/permissions"
+import { toast } from "sonner"
 
 const fetcher = async (url: string) => {
-  const res = await fetch(url)
+  const res = await fetch(url, { cache: "no-store" })
   const data = await res.json()
   if (!res.ok) throw new Error(data?.error || "Erro ao carregar técnicos")
   return Array.isArray(data) ? data : []
@@ -84,11 +85,25 @@ export default function TecnicosRarotecPage() {
   async function handleDelete(id: number) {
     if (!confirm("Tem certeza que deseja excluir este técnico?")) return
 
+    const previousTecnicos = tecnicos
+    // Atualização otimista imediata na interface (0ms)
+    mutate(
+      tecnicos.filter((t) => t.id !== id),
+      false
+    )
+
     try {
-      await fetch(`/api/tecnicos-rarotec/${id}`, { method: "DELETE" })
-      mutate()
+      const res = await fetch(`/api/tecnicos-rarotec/${id}`, { method: "DELETE" })
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}))
+        throw new Error(errorData.error || "Erro ao excluir técnico")
+      }
+      toast.success("Técnico excluído com sucesso")
+      await mutate()
     } catch (error) {
-      console.error("Error deleting tecnico:", error)
+      // Rollback imediato se falhar
+      mutate(previousTecnicos, false)
+      toast.error(error instanceof Error ? error.message : "Erro ao excluir técnico")
     }
   }
 
@@ -139,15 +154,27 @@ export default function TecnicosRarotecPage() {
   }
 
   async function handleToggleStatus(tecnico: TecnicoRarotec) {
+    const previousTecnicos = tecnicos
+    const nextStatus = !tecnico.ativo
+    mutate(
+      tecnicos.map((t) => (t.id === tecnico.id ? { ...t, ativo: nextStatus } : t)),
+      false
+    )
     try {
-      await fetch(`/api/tecnicos-rarotec/${tecnico.id}`, {
+      const res = await fetch(`/api/tecnicos-rarotec/${tecnico.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...tecnico, ativo: !tecnico.ativo }),
+        body: JSON.stringify({ ...tecnico, ativo: nextStatus }),
       })
-      mutate()
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}))
+        throw new Error(errorData.error || "Erro ao atualizar status do técnico")
+      }
+      toast.success(nextStatus ? "Técnico ativado com sucesso" : "Técnico inativado com sucesso")
+      await mutate()
     } catch (error) {
-      console.error("Error updating tecnico:", error)
+      mutate(previousTecnicos, false)
+      toast.error(error instanceof Error ? error.message : "Erro ao atualizar status do técnico")
     }
   }
 
@@ -161,10 +188,22 @@ export default function TecnicosRarotecPage() {
     setDialogOpen(true)
   }
 
-  function handleSuccess() {
+  async function handleSuccess(savedTecnico?: TecnicoRarotec) {
     setDialogOpen(false)
+    const isEditing = Boolean(editingTecnico)
     setEditingTecnico(null)
-    mutate()
+    if (savedTecnico && savedTecnico.id) {
+      if (isEditing) {
+        mutate(
+          tecnicos.map((t) => (t.id === savedTecnico.id ? { ...t, ...savedTecnico } : t)),
+          false
+        )
+      } else {
+        mutate([savedTecnico, ...tecnicos], false)
+      }
+    }
+    toast.success(isEditing ? "Técnico atualizado com sucesso" : "Técnico cadastrado com sucesso")
+    await mutate()
   }
 
   const filteredTecnicos = tecnicos.filter((t) => {

@@ -24,6 +24,7 @@ import { MaskedInput } from "@/components/masked-input"
 import { ModulosSelector } from "@/components/modulos-selector"
 import { TIPOS_ORGAO, ESTADOS_BR } from "@/lib/constants"
 import { Plus, Pencil, Trash2, X, Save, Search, Loader2, CheckCircle, AlertCircle } from "lucide-react"
+import { toast } from "sonner"
 import type { Cliente } from "@/lib/types"
 
 interface Orgao {
@@ -217,13 +218,22 @@ export function OrgaosDialog({ cliente, open, onOpenChange }: OrgaosDialogProps)
   }
 
   async function handleDelete(id: number) {
-    if (!confirm("Tem certeza que deseja excluir este orgao?")) return
+    if (!confirm("Tem certeza que deseja excluir este órgão?")) return
+
+    const previousOrgaos = orgaos
+    setOrgaos(previousOrgaos.filter((o) => o.id !== id))
 
     try {
-      await fetch(`/api/orgaos/${id}`, { method: "DELETE" })
+      const res = await fetch(`/api/orgaos/${id}`, { method: "DELETE" })
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}))
+        throw new Error(errorData.error || "Erro ao excluir órgão")
+      }
+      toast.success("Órgão excluído com sucesso")
       await fetchOrgaos()
     } catch (error) {
-      console.error("Erro ao excluir orgao:", error)
+      setOrgaos(previousOrgaos)
+      toast.error(error instanceof Error ? error.message : "Erro ao excluir órgão")
     }
   }
 

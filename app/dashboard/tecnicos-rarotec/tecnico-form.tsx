@@ -60,7 +60,7 @@ const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
 interface TecnicoFormProps {
   tecnico?: TecnicoRarotec | null
-  onSuccess: () => void
+  onSuccess: (saved?: TecnicoRarotec) => void
   onCancel: () => void
 }
 
@@ -191,7 +191,8 @@ export function TecnicoForm({ tecnico, onSuccess, onCancel }: TecnicoFormProps) 
         throw new Error(errorData?.error || "Erro ao salvar")
       }
 
-      onSuccess()
+      const savedData = await res.json().catch(() => null)
+      onSuccess(savedData)
     } catch (error: any) {
       console.error("Error saving tecnico:", error)
       alert(error.message || "Erro ao salvar tecnico")

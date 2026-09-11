@@ -21,9 +21,10 @@ const fetcher = (url: string) => fetch(url).then((res) => res.json())
 interface TecnicoClienteFormProps {
   tecnico: TecnicoCliente | null
   onClose: () => void
+  onSuccess?: (saved?: TecnicoCliente) => void
 }
 
-export function TecnicoClienteForm({ tecnico, onClose }: TecnicoClienteFormProps) {
+export function TecnicoClienteForm({ tecnico, onClose, onSuccess }: TecnicoClienteFormProps) {
   const { data: clientes } = useSWR<Cliente[]>("/api/clientes", fetcher)
   const [loading, setLoading] = useState(false)
   const [formData, setFormData] = useState({
@@ -46,7 +47,7 @@ export function TecnicoClienteForm({ tecnico, onClose }: TecnicoClienteFormProps
       const url = tecnico ? `/api/tecnicos-clientes/${tecnico.id}` : "/api/tecnicos-clientes"
       const method = tecnico ? "PUT" : "POST"
 
-      await fetch(url, {
+      const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -55,9 +56,27 @@ export function TecnicoClienteForm({ tecnico, onClose }: TecnicoClienteFormProps
         }),
       })
 
-      onClose()
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => null)
+        throw new Error(errorData?.error || "Erro ao salvar técnico")
+      }
+
+      const saved = await res.json().catch(() => null)
+      if (saved) {
+        const clienteObj = clientes?.find((c) => c.id === parseInt(formData.cliente_id))
+        if (clienteObj) {
+          saved.cliente_nome = clienteObj.nome_fantasia || clienteObj.razao_social
+        }
+      }
+
+      if (onSuccess) {
+        onSuccess(saved)
+      } else {
+        onClose()
+      }
     } catch (error) {
       console.error("Erro ao salvar tecnico:", error)
+      alert(error instanceof Error ? error.message : "Erro ao salvar técnico")
     } finally {
       setLoading(false)
     }

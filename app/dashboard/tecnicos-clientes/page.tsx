@@ -16,9 +16,15 @@ import { Badge } from "@/components/ui/badge"
 import { TecnicoClienteForm } from "./tecnico-cliente-form"
 import { ExportButton } from "@/components/export-button"
 import { exportToExcel, exportToPDF } from "@/lib/export-utils"
+import { toast } from "sonner"
 import type { TecnicoCliente } from "@/lib/types"
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json())
+const fetcher = async (url: string) => {
+  const res = await fetch(url, { cache: "no-store" })
+  const data = await res.json().catch(() => null)
+  if (!res.ok) throw new Error(data?.error || "Erro ao carregar técnicos dos clientes")
+  return data
+}
 
 export default function TecnicosClientesPage() {
   const { data: tecnicos, mutate } = useSWR<TecnicoCliente[]>("/api/tecnicos-clientes", fetcher)
@@ -39,16 +45,49 @@ export default function TecnicosClientesPage() {
   }
 
   const handleDelete = async (id: number) => {
-    if (!confirm("Tem certeza que deseja excluir este tecnico?")) return
+    if (!confirm("Tem certeza que deseja excluir este técnico?")) return
 
-    await fetch(`/api/tecnicos-clientes/${id}`, { method: "DELETE" })
-    mutate()
+    const previousTecnicos = tecnicos ?? []
+    mutate(
+      previousTecnicos.filter((t) => t.id !== id),
+      false
+    )
+
+    try {
+      const res = await fetch(`/api/tecnicos-clientes/${id}`, { method: "DELETE" })
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}))
+        throw new Error(errorData.error || "Erro ao excluir técnico")
+      }
+      toast.success("Técnico excluído com sucesso")
+      await mutate()
+    } catch (error) {
+      mutate(previousTecnicos, false)
+      toast.error(error instanceof Error ? error.message : "Erro ao excluir técnico")
+    }
   }
 
   const handleFormClose = () => {
     setIsFormOpen(false)
     setSelectedTecnico(null)
-    mutate()
+  }
+
+  const handleFormSuccess = async (saved?: TecnicoCliente) => {
+    setIsFormOpen(false)
+    const isEditing = Boolean(selectedTecnico)
+    setSelectedTecnico(null)
+    if (saved && saved.id) {
+      if (isEditing) {
+        mutate(
+          (tecnicos ?? []).map((t) => (t.id === saved.id ? { ...t, ...saved } : t)),
+          false
+        )
+      } else {
+        mutate([saved, ...(tecnicos ?? [])], false)
+      }
+    }
+    toast.success(isEditing ? "Técnico atualizado com sucesso" : "Técnico cadastrado com sucesso")
+    await mutate()
   }
 
   const handleNewTecnico = () => {
@@ -271,6 +310,7 @@ export default function TecnicosClientesPage() {
           <TecnicoClienteForm
             tecnico={selectedTecnico}
             onClose={handleFormClose}
+            onSuccess={handleFormSuccess}
           />
         </DialogContent>
       </Dialog>

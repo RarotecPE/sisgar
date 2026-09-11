@@ -48,13 +48,19 @@ import { ClienteForm } from "./cliente-form"
 import { ContratosDialog } from "./contratos-dialog"
 import { OrgaosDialog } from "./orgaos-dialog"
 import { ExportButton } from "@/components/export-button"
+import { toast } from "sonner"
 import type { Cliente } from "@/lib/types"
 
 const ClientesLote = dynamic(() => import("@/components/clientes-lote").then((m) => m.ClientesLote), {
   ssr: false,
 })
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json())
+const fetcher = async (url: string) => {
+  const res = await fetch(url, { cache: "no-store" })
+  const data = await res.json().catch(() => null)
+  if (!res.ok) throw new Error(data?.error || "Erro ao carregar clientes")
+  return data
+}
 
 export default function ClientesPage() {
   const { data: clientes, mutate, isLoading } = useSWR<Cliente[]>("/api/clientes", fetcher)
@@ -92,32 +98,76 @@ export default function ClientesPage() {
   const handleDelete = async (cliente: Cliente) => {
     if (!confirm(`Tem certeza que deseja excluir "${cliente.nome_fantasia || cliente.razao_social}"?`)) return
 
-    const res = await fetch(`/api/clientes/${cliente.id}`, { method: "DELETE" })
+    const previousClientes = clientes ?? []
+    mutate(
+      previousClientes.filter((c) => c.id !== cliente.id),
+      false
+    )
 
-    // Clientes ja utilizados nao podem ser excluidos (409), apenas inativados.
-    if (res.status === 409) {
-      const data = await res.json().catch(() => ({}))
-      const inativar = confirm(
-        `${data.message || "Este cliente ja foi utilizado e nao pode ser excluido."}\n\nDeseja INATIVAR este cliente agora?`
-      )
-      if (inativar) {
-        await fetch(`/api/clientes/${cliente.id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ...cliente, ativo: false }),
-        })
-        mutate()
+    try {
+      const res = await fetch(`/api/clientes/${cliente.id}`, { method: "DELETE" })
+
+      // Clientes ja utilizados nao podem ser excluidos (409), apenas inativados.
+      if (res.status === 409) {
+        mutate(previousClientes, false)
+        const data = await res.json().catch(() => ({}))
+        const inativar = confirm(
+          `${data.message || "Este cliente ja foi utilizado e nao pode ser excluido."}\n\nDeseja INATIVAR este cliente agora?`
+        )
+        if (inativar) {
+          mutate(
+            previousClientes.map((c) => (c.id === cliente.id ? { ...c, ativo: false } : c)),
+            false
+          )
+          const putRes = await fetch(`/api/clientes/${cliente.id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ...cliente, ativo: false }),
+          })
+          if (!putRes.ok) {
+            mutate(previousClientes, false)
+            throw new Error("Erro ao inativar cliente")
+          }
+          toast.success("Cliente inativado com sucesso")
+          await mutate()
+        }
+        return
       }
-      return
-    }
 
-    mutate()
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || "Erro ao excluir cliente")
+      }
+
+      toast.success("Cliente excluído com sucesso")
+      await mutate()
+    } catch (error) {
+      mutate(previousClientes, false)
+      toast.error(error instanceof Error ? error.message : "Erro ao excluir cliente")
+    }
   }
 
   const handleFormClose = () => {
     setIsFormOpen(false)
     setSelectedCliente(null)
-    mutate()
+  }
+
+  const handleFormSuccess = async (savedCliente?: Cliente) => {
+    setIsFormOpen(false)
+    const isEditing = Boolean(selectedCliente)
+    setSelectedCliente(null)
+    if (savedCliente && savedCliente.id) {
+      if (isEditing) {
+        mutate(
+          (clientes ?? []).map((c) => (c.id === savedCliente.id ? { ...c, ...savedCliente } : c)),
+          false
+        )
+      } else {
+        mutate([savedCliente, ...(clientes ?? [])], false)
+      }
+    }
+    toast.success(isEditing ? "Cliente atualizado com sucesso" : "Cliente cadastrado com sucesso")
+    await mutate()
   }
 
   // Funções de exportação
@@ -488,6 +538,7 @@ export default function ClientesPage() {
           <ClienteForm
             cliente={selectedCliente}
             onClose={handleFormClose}
+            onSuccess={handleFormSuccess}
           />
         </DialogContent>
       </Dialog>

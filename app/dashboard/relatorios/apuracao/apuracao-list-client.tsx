@@ -59,8 +59,14 @@ import {
 } from "@/lib/apuracao"
 import { generateApuracaoPDF } from "@/lib/apuracao-pdf-generator"
 import { downloadPDF } from "@/lib/pdf-generator"
+import { toast } from "sonner"
 
-const fetcher = (url: string) => fetch(url).then((r) => r.json())
+const fetcher = async (url: string) => {
+  const res = await fetch(url, { cache: "no-store" })
+  const data = await res.json().catch(() => null)
+  if (!res.ok) throw new Error(data?.error || "Erro ao carregar dados")
+  return data
+}
 
 export function ApuracaoListClient() {
   const router = useRouter()
@@ -148,9 +154,27 @@ export function ApuracaoListClient() {
 
   async function excluir() {
     if (!excluirId) return
-    await fetch(`/api/apuracao/relatorios/${excluirId}`, { method: "DELETE" })
+    const id = excluirId
     setExcluirId(null)
-    mutate()
+    const prev = data ?? []
+    mutate(
+      prev.filter((r) => r.id !== id),
+      false
+    )
+
+    try {
+      const res = await fetch(`/api/apuracao/relatorios/${id}`, { method: "DELETE" })
+      if (!res.ok) {
+        mutate(prev, false)
+        const errData = await res.json().catch(() => ({}))
+        throw new Error(errData.error || "Erro ao excluir apuração")
+      }
+      toast.success("Apuração excluída com sucesso")
+      await mutate()
+    } catch (e) {
+      mutate(prev, false)
+      toast.error(e instanceof Error ? e.message : "Erro ao excluir apuração")
+    }
   }
 
   return (

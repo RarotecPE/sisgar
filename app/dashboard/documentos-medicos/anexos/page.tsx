@@ -53,8 +53,14 @@ import { useSession } from "@/lib/auth-context"
 import { isGestor } from "@/lib/permissions"
 import { LABEL_TIPO_MEDICO, STATUS_VALIDACAO, type DocumentoMedico } from "@/lib/documentos-medicos"
 import { DocumentoMedicoDetalhe } from "@/components/documento-medico-detalhe"
+import { toast } from "sonner"
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json())
+const fetcher = async (url: string) => {
+  const res = await fetch(url, { cache: "no-store" })
+  const data = await res.json().catch(() => null)
+  if (!res.ok) throw new Error(data?.error || "Erro ao carregar dados")
+  return data
+}
 
 const TIPOS_OPCOES = [
   { value: "atestado", label: "Atestado Médico" },
@@ -192,13 +198,28 @@ export default function AnexosMedicosPage() {
 
   const handleExcluir = async () => {
     if (excluirId == null) return
+    const id = excluirId
+    setExcluirId(null)
+    const prevDocs = documentos ?? []
+    mutate(
+      prevDocs.filter((d) => d.id !== id),
+      false
+    )
+
     try {
-      await fetch(`/api/documentos-medicos/${excluirId}`, { method: "DELETE" })
-      setExcluirId(null)
-      mutate()
+      const res = await fetch(`/api/documentos-medicos/${id}`, { method: "DELETE" })
+      if (!res.ok) {
+        mutate(prevDocs, false)
+        const errorData = await res.json().catch(() => ({}))
+        throw new Error(errorData.error || "Erro ao excluir documento")
+      }
+      toast.success("Documento excluído com sucesso")
+      await mutate()
       mutatePendencias()
     } catch (e) {
+      mutate(prevDocs, false)
       console.error("Erro ao excluir:", e)
+      toast.error(e instanceof Error ? e.message : "Erro ao excluir documento")
     }
   }
 

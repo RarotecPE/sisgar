@@ -36,9 +36,15 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { TIPOS_CONTRATO } from "@/lib/constants"
+import { toast } from "sonner"
 import type { Cliente, Contrato, AditivoContrato } from "@/lib/types"
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json())
+const fetcher = async (url: string) => {
+  const res = await fetch(url, { cache: "no-store" })
+  const data = await res.json().catch(() => null)
+  if (!res.ok) throw new Error(data?.error || "Erro ao carregar dados")
+  return data
+}
 
 interface ContratosDialogProps {
   cliente: Cliente
@@ -57,8 +63,25 @@ export function ContratosDialog({ cliente, open, onOpenChange }: ContratosDialog
 
   const handleDelete = async (id: number) => {
     if (!confirm("Tem certeza que deseja excluir este contrato?")) return
-    await fetch(`/api/contratos/${id}`, { method: "DELETE" })
-    mutate()
+
+    const previousContratos = contratos ?? []
+    mutate(
+      previousContratos.filter((c) => c.id !== id),
+      false
+    )
+
+    try {
+      const res = await fetch(`/api/contratos/${id}`, { method: "DELETE" })
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}))
+        throw new Error(errorData.error || "Erro ao excluir contrato")
+      }
+      toast.success("Contrato excluído com sucesso")
+      await mutate()
+    } catch (err) {
+      mutate(previousContratos, false)
+      toast.error(err instanceof Error ? err.message : "Erro ao excluir contrato")
+    }
   }
 
   const formatDate = (date: string) => {
@@ -210,8 +233,25 @@ function AditivosSection({ contratoId }: { contratoId: number }) {
 
   const handleDelete = async (id: number) => {
     if (!confirm("Tem certeza que deseja excluir este aditivo?")) return
-    await fetch(`/api/aditivos/${id}`, { method: "DELETE" })
-    mutate()
+
+    const previousAditivos = aditivos ?? []
+    mutate(
+      previousAditivos.filter((a) => a.id !== id),
+      false
+    )
+
+    try {
+      const res = await fetch(`/api/aditivos/${id}`, { method: "DELETE" })
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}))
+        throw new Error(errorData.error || "Erro ao excluir aditivo")
+      }
+      toast.success("Aditivo excluído com sucesso")
+      await mutate()
+    } catch (err) {
+      mutate(previousAditivos, false)
+      toast.error(err instanceof Error ? err.message : "Erro ao excluir aditivo")
+    }
   }
 
   return (

@@ -218,24 +218,46 @@ export default function ResponsabilidadesPage() {
 
   async function remover(item: ResponsabilidadeModulo) {
     if (!confirm(`Remover ${item.tecnico_nome} da responsabilidade por ${item.modulo}?`)) return
-    const response = await fetch(`/api/responsabilidades?id=${item.id}`, { method: "DELETE" })
-    const result = await response.json()
-    if (!response.ok) return toast.error(result.error || "Não foi possível remover")
-    toast.success("Atribuição removida")
-    carregarDados()
+    const prevDados = dados
+    setDados((prev) => prev.filter((d) => d.id !== item.id))
+
+    try {
+      const response = await fetch(`/api/responsabilidades?id=${item.id}`, { method: "DELETE" })
+      const result = await response.json()
+      if (!response.ok) {
+        setDados(prevDados)
+        return toast.error(result.error || "Não foi possível remover")
+      }
+      toast.success("Atribuição removida")
+      carregarDados()
+    } catch {
+      setDados(prevDados)
+      toast.error("Erro ao remover atribuição")
+    }
   }
 
   async function alternarNaoAplicavel(item: ResponsabilidadeModulo) {
     const novoValor = !item.nao_aplicavel
-    const response = await fetch("/api/responsabilidades", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: item.id, nao_aplicavel: novoValor }),
-    })
-    const result = await response.json()
-    if (!response.ok) return toast.error(result.error || "Não foi possível atualizar")
-    toast.success(novoValor ? `${item.modulo} marcado como não se aplica` : `${item.modulo} voltou a se aplicar`)
-    carregarDados()
+    const prevDados = dados
+    setDados((prev) => prev.map((d) => (d.id === item.id ? { ...d, nao_aplicavel: novoValor } : d)))
+
+    try {
+      const response = await fetch("/api/responsabilidades", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: item.id, nao_aplicavel: novoValor }),
+      })
+      const result = await response.json()
+      if (!response.ok) {
+        setDados(prevDados)
+        return toast.error(result.error || "Não foi possível atualizar")
+      }
+      toast.success(novoValor ? `${item.modulo} marcado como não se aplica` : `${item.modulo} voltou a se aplicar`)
+      carregarDados()
+    } catch {
+      setDados(prevDados)
+      toast.error("Erro ao atualizar atribuição")
+    }
   }
 
   const exportData = dados.map((item) => ({
