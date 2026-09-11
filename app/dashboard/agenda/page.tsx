@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { MunicipioCombobox } from "@/components/municipio-combobox"
+import { cn } from "@/lib/utils"
 import {
   Dialog,
   DialogContent,
@@ -775,8 +776,8 @@ export default function AgendaPage() {
                           const isFds = dia.getDay() === 0 || dia.getDay() === 6
                           
                           return (
-                            <div key={dia.toISOString()} className={`flex gap-3 p-2 rounded ${isFds ? "bg-red-50" : "bg-muted/30"}`}>
-                              <div className={`text-sm font-medium w-16 ${isFds ? "text-red-600" : ""}`}>
+                            <div key={dia.toISOString()} className={cn("flex gap-3 p-2 rounded", isFds ? "bg-red-500/10 text-red-700 dark:bg-red-950/30 dark:text-red-300 border border-red-200/50 dark:border-red-900/40" : "bg-muted/30 dark:bg-muted/15")}>
+                              <div className={cn("text-sm font-medium w-16", isFds ? "text-red-600 dark:text-red-400" : "text-foreground")}>
                                 {diaSemana} {format(dia, "dd")}
                               </div>
                               <div className="flex-1 space-y-1">
@@ -954,13 +955,14 @@ export default function AgendaPage() {
           </CardHeader>
           <CardContent>
             {/* Cabecalho dos dias da semana */}
-            <div className="grid grid-cols-7 mb-2">
+            <div className="grid grid-cols-7 mb-2 gap-1.5">
               {DIAS_SEMANA.map((dia, i) => (
                 <div 
                   key={dia} 
-                  className={`py-2 text-center text-sm font-medium ${
-                    i === 0 || i === 6 ? "text-muted-foreground" : "text-foreground"
-                  }`}
+                  className={cn(
+                    "py-2 text-center text-xs font-semibold uppercase tracking-wider",
+                    i === 0 || i === 6 ? "text-muted-foreground/60" : "text-muted-foreground"
+                  )}
                 >
                   {dia}
                 </div>
@@ -968,54 +970,98 @@ export default function AgendaPage() {
             </div>
 
             {/* Grid do calendario */}
-            <div className="grid grid-cols-7 gap-1">
+            <div className="grid grid-cols-7 gap-1.5">
               {diasCalendario.map((dia) => {
                 const eventosDia = getEventosDia(dia)
                 const isHoje = isToday(dia)
                 const isMesAtual = isSameMonth(dia, mesAtual)
                 const isFimDeSemana = isWeekend(dia)
                 
-                // Determinar cor de fundo baseada na semana
+                // Determinar periodo relativo a semana atual
                 const inicioSemanaAtual = startOfWeek(new Date(), { weekStartsOn: 0 })
                 const fimSemanaAtual = endOfWeek(new Date(), { weekStartsOn: 0 })
                 const isSemanaPassada = dia < inicioSemanaAtual
                 const isSemanaAtual = dia >= inicioSemanaAtual && dia <= fimSemanaAtual
                 
-                // Finais de semana sempre cinza, senao aplica cor da semana
-                let bgColor = ""
-                if (isMesAtual) {
-                  if (isFimDeSemana) {
-                    bgColor = "bg-muted/30"
-                  } else if (isSemanaPassada) {
-                    bgColor = "bg-blue-50"
-                  } else if (isSemanaAtual) {
-                    bgColor = "bg-green-50"
-                  }
+                // Estilo do fundo e borda da celula compativel com modo claro e escuro
+                let cellTheme = "bg-card dark:bg-card/70 border-border/60 hover:bg-accent/40 dark:hover:bg-accent/25"
+                if (!isMesAtual) {
+                  cellTheme = "opacity-35 bg-muted/20 dark:bg-muted/10 border-border/30 hover:opacity-75"
+                } else if (isHoje) {
+                  cellTheme = "ring-2 ring-primary ring-offset-2 ring-offset-background bg-primary/[0.06] dark:bg-primary/[0.14] border-primary/50 shadow-xs"
+                } else if (isFimDeSemana) {
+                  cellTheme = "bg-muted/35 dark:bg-muted/15 border-border/40 hover:bg-muted/50 dark:hover:bg-muted/25"
+                } else if (isSemanaAtual) {
+                  cellTheme = "bg-emerald-500/[0.05] dark:bg-emerald-500/[0.10] border-emerald-500/25 dark:border-emerald-500/30 hover:bg-emerald-500/[0.09] dark:hover:bg-emerald-500/[0.15]"
+                } else if (isSemanaPassada) {
+                  cellTheme = "bg-blue-50/40 dark:bg-blue-950/20 border-blue-100/60 dark:border-blue-900/30 hover:bg-blue-50/70 dark:hover:bg-blue-950/30"
                 }
+
+                // Tipos únicos para os mini indicadores coloridos
+                const tiposNoDia = Array.from(new Set(eventosDia.map((e) => e.tipo || "visita"))).slice(0, 4)
 
                 return (
                   <div
                     key={dia.toISOString()}
-                    className={`min-h-28 rounded-lg border transition-all ${
-                      !isMesAtual ? "opacity-40 bg-muted/20" : bgColor
-                    } ${isHoje ? "ring-2 ring-primary ring-offset-2" : ""} hover:bg-accent/50 cursor-pointer`}
+                    className={cn(
+                      "group min-h-28 rounded-lg border p-2 flex flex-col justify-between transition-all cursor-pointer select-none",
+                      cellTheme
+                    )}
                     onClick={() => handleDayClick(dia)}
                   >
-                    <div className="p-1.5">
-                      <div className={`text-sm font-medium mb-1 ${
-                        isHoje ? "text-primary" : !isMesAtual ? "text-muted-foreground" : ""
-                      }`}>
+                    <div className="flex items-center justify-between">
+                      <span
+                        className={cn(
+                          "inline-flex h-6 w-6 items-center justify-center rounded-full text-xs transition-colors",
+                          isHoje
+                            ? "bg-primary text-primary-foreground font-bold shadow-xs"
+                            : !isMesAtual
+                            ? "text-muted-foreground/50 font-normal"
+                            : isFimDeSemana
+                            ? "text-muted-foreground font-medium"
+                            : "text-foreground font-medium"
+                        )}
+                      >
                         {format(dia, "d")}
-                      </div>
-                      {eventosDia.length > 0 && (
-                        <div className="mt-2 min-w-0 break-words text-center text-[10px] leading-tight text-muted-foreground sm:text-xs">
-                          <span className="sm:hidden">{eventosDia.length}</span>
-                          <span className="hidden sm:inline">{eventosDia.length} </span>
-                          <span className="sm:hidden">{eventosDia.length === 1 ? " evento" : " eventos"}</span>
-                          <span className="hidden sm:inline">{eventosDia.length === 1 ? "evento" : "eventos"}</span>
-                        </div>
+                      </span>
+                      {isHoje && (
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-primary">
+                          Hoje
+                        </span>
                       )}
                     </div>
+
+                    {eventosDia.length > 0 && (
+                      <div className="mt-auto pt-2 flex flex-col items-center gap-1">
+                        <span
+                          className={cn(
+                            "inline-flex w-full items-center justify-center gap-1 rounded-md px-1.5 py-1 text-[11px] font-medium transition-colors border shadow-2xs",
+                            isHoje
+                              ? "bg-primary/15 text-primary border-primary/30 dark:bg-primary/25 dark:text-blue-200 dark:border-primary/40"
+                              : "bg-primary/10 text-primary border-primary/20 dark:bg-blue-500/15 dark:text-blue-300 dark:border-blue-500/30 group-hover:bg-primary/20 dark:group-hover:bg-blue-500/25"
+                          )}
+                        >
+                          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-primary dark:bg-blue-400" />
+                          <span className="font-semibold tabular-nums">{eventosDia.length}</span>
+                          <span className="hidden sm:inline text-[10px]">{eventosDia.length === 1 ? "evento" : "eventos"}</span>
+                        </span>
+
+                        {tiposNoDia.length > 1 && (
+                          <div className="flex items-center gap-1 justify-center py-0.5">
+                            {tiposNoDia.map((t) => {
+                              const cfg = TIPOS_EVENTO.find((x) => x.value === t) || TIPOS_EVENTO[0]
+                              return (
+                                <span
+                                  key={t}
+                                  className={cn("h-1.5 w-1.5 rounded-full ring-1 ring-background", cfg.color)}
+                                  title={cfg.label}
+                                />
+                              )
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )
               })}
@@ -1303,16 +1349,16 @@ export default function AgendaPage() {
 
                 {/* Anexo do documento medico (atestado, consulta, licenca) */}
                 {isTipoMedico(solicitacaoTipoEvento) && (
-                  <div className="space-y-2 rounded-lg border border-red-100 bg-red-50/50 p-3">
-                    <Label className="flex items-center gap-2 text-red-800">
+                  <div className="space-y-2 rounded-lg border border-red-200/60 bg-red-50/60 dark:border-red-900/40 dark:bg-red-950/25 p-3">
+                    <Label className="flex items-center gap-2 text-red-800 dark:text-red-300">
                       <Paperclip className="h-4 w-4" />
                       Anexar Documento (atestado/comprovante)
                     </Label>
-                    <p className="text-xs text-red-700">
+                    <p className="text-xs text-red-700 dark:text-red-400">
                       Anexe o documento agora para agilizar. Se preferir, pode anexar depois na tela de Documentos Médicos, mas ficará pendente até o envio.
                     </p>
                     {solicitacaoArquivo ? (
-                      <div className="flex items-center justify-between gap-2 rounded-md bg-white px-3 py-2 text-sm">
+                      <div className="flex items-center justify-between gap-2 rounded-md bg-white dark:bg-card border border-red-100 dark:border-red-900/30 px-3 py-2 text-sm">
                         <span className="flex items-center gap-2 truncate">
                           <FileText className="h-4 w-4 shrink-0 text-red-600" />
                           <span className="truncate">{solicitacaoArquivo.name}</span>

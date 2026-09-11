@@ -866,8 +866,8 @@ export default function PlanejamentoSemanalPage() {
                               const isFds = dia.getDay() === 0 || dia.getDay() === 6
                               
                               return (
-                                <div key={dia.toISOString()} className={`flex gap-3 p-2 rounded ${isFds ? "bg-red-50" : "bg-muted/30"}`}>
-                                  <div className={`text-sm font-medium w-12 ${isFds ? "text-red-600" : ""}`}>
+                                <div key={dia.toISOString()} className={cn("flex gap-3 p-2 rounded", isFds ? "bg-red-500/10 text-red-700 dark:bg-red-950/30 dark:text-red-300 border border-red-200/50 dark:border-red-900/40" : "bg-muted/30 dark:bg-muted/15")}>
+                                  <div className={cn("text-sm font-medium w-12", isFds ? "text-red-600 dark:text-red-400" : "text-foreground")}>
                                     {diaSemana} {format(dia, "dd")}
                                   </div>
                                   <div className="flex-1 space-y-1">
@@ -988,14 +988,16 @@ export default function PlanejamentoSemanalPage() {
                     return (
                       <th 
                         key={i} 
-                        className={`p-2 text-center font-medium text-xs w-[calc((100%-8rem)/7)] ${
-                          isHoje ? "bg-primary/10" : "bg-muted/95"
-                        } ${isFds ? "bg-red-50" : ""}`}
+                        className={cn(
+                          "p-2 text-center font-medium text-xs w-[calc((100%-8rem)/7)]",
+                          isHoje ? "bg-primary/10" : "bg-muted/95",
+                          isFds && "bg-red-500/10 dark:bg-red-950/25"
+                        )}
                       >
-                        <div className={`text-[10px] uppercase ${isHoje ? "text-primary" : isFds ? "text-red-600" : "text-muted-foreground"}`}>
+                        <div className={cn("text-[10px] uppercase", isHoje ? "text-primary font-bold" : isFds ? "text-red-600 dark:text-red-400 font-semibold" : "text-muted-foreground")}>
                           {DIAS_SEMANA[dia.getDay()].label}
                         </div>
-                        <div className={`text-base font-bold ${isHoje ? "text-primary" : isFds ? "text-red-600" : ""}`}>
+                        <div className={cn("text-base font-bold", isHoje ? "text-primary" : isFds ? "text-red-600 dark:text-red-400" : "text-foreground")}>
                           {format(dia, "dd")}
                         </div>
                       </th>
@@ -1029,8 +1031,8 @@ export default function PlanejamentoSemanalPage() {
                           onMouseEnter={() => handleCellMouseEnter(rowIdx, i)}
                           className={cn(
                             "p-1.5 align-top",
-                            isHoje && "bg-primary/5",
-                            isFds && "bg-red-50/50",
+                            isHoje && "bg-primary/5 dark:bg-primary/10",
+                            isFds && "bg-red-500/5 dark:bg-red-950/20",
                             isSelected && "bg-primary/15 ring-2 ring-inset ring-primary"
                           )}
                         >

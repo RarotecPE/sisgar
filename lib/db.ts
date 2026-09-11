@@ -25,8 +25,12 @@ type CompiledQuery = {
   values: QueryValue[]
 }
 
-let _sql: SqlQuery | null = null
-let _pool: Pool | null = null
+declare global {
+  // eslint-disable-next-line no-var
+  var __sisgar_pg_pool: Pool | undefined
+  // eslint-disable-next-line no-var
+  var __sisgar_sql: SqlQuery | undefined
+}
 
 function normalizeDatabaseConfig(value: string): DatabaseConfig {
   const trimmed = value.trim()
@@ -104,11 +108,19 @@ function createStatement<T>(
 }
 
 function createPgSql(url: string): SqlQuery {
-  _pool = new Pool({ connectionString: url })
+  if (!globalThis.__sisgar_pg_pool) {
+    globalThis.__sisgar_pg_pool = new Pool({
+      connectionString: url,
+      max: 10,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 10000,
+    })
+  }
+  const pool = globalThis.__sisgar_pg_pool
 
   return <T = Record<string, unknown>>(strings: TemplateStringsArray, ...values: QueryValue[]) =>
     createStatement<T>(strings, values, async ({ query, values: queryValues }) => {
-      const result = await _pool!.query(query, queryValues)
+      const result = await pool.query(query, queryValues)
       return result.rows as T[]
     })
 }
@@ -123,16 +135,19 @@ function createNeonSql(url: string): SqlQuery {
 }
 
 function getSql(): SqlQuery {
-  if (!_sql) {
-    if (!process.env.DATABASE_URL) {
-      throw new Error("DATABASE_URL environment variable is not set")
-    }
-
-    const config = normalizeDatabaseConfig(process.env.DATABASE_URL)
-    _sql = config.useNeon ? createNeonSql(config.url) : createPgSql(config.url)
+  if (globalThis.__sisgar_sql) {
+    return globalThis.__sisgar_sql
   }
 
-  return _sql
+  if (!process.env.DATABASE_URL) {
+    throw new Error("DATABASE_URL environment variable is not set")
+  }
+
+  const config = normalizeDatabaseConfig(process.env.DATABASE_URL)
+  const sqlInstance = config.useNeon ? createNeonSql(config.url) : createPgSql(config.url)
+  globalThis.__sisgar_sql = sqlInstance
+
+  return sqlInstance
 }
 
 export const sql: SqlQuery = ((strings, ...values) => {

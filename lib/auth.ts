@@ -1,5 +1,6 @@
 import { cookies } from "next/headers"
 import { NextRequest, NextResponse } from "next/server"
+import { cache } from "react"
 import bcrypt from "bcryptjs"
 import { sql } from "./db"
 
@@ -150,6 +151,18 @@ async function introspectGlobalSession(token: string): Promise<NexusSession | nu
   }
 }
 
+type CachedEntry<T> = {
+  data: T
+  expiresAt: number
+}
+
+const sessionCache = new Map<string, CachedEntry<User>>()
+const tecnicoCache = new Map<number, CachedEntry<number | null>>()
+const setoresCache = new Map<number, CachedEntry<string[]>>()
+
+const SESSION_CACHE_TTL_MS = 15_000 // 15s deduplica rajadas simultâneas de navegação e chamadas da API
+const RESOLVER_CACHE_TTL_MS = 60_000 // 60s de cache em memória para dados estáticos do técnico
+
 async function syncLocalUser(session: NexusSession): Promise<User | null> {
   const cargo = mapRoleToCargo(session.role)
   if (!cargo) return null
@@ -157,7 +170,18 @@ async function syncLocalUser(session: NexusSession): Promise<User | null> {
   const nexusUserId = session.user.id
   const email = normalizeEmail(session.user.email)
   const nome = session.user.nome || email
-  const existing = await sql`
+  type UsuarioRow = {
+    id: number
+    nexus_user_id: string | null
+    nexus_email: string | null
+    nome: string
+    email: string
+    cargo: string | null
+    ativo: boolean
+    apuracao_mensal: boolean
+  }
+
+  const existing = await sql<UsuarioRow>`
     SELECT id, nexus_user_id, nexus_email, nome, email, cargo, ativo, apuracao_mensal
     FROM usuarios
     WHERE nexus_user_id = ${nexusUserId}::uuid OR LOWER(nexus_email) = ${email} OR LOWER(email) = ${email}
@@ -166,19 +190,34 @@ async function syncLocalUser(session: NexusSession): Promise<User | null> {
   `
 
   if (existing.length > 0) {
-    const [updated] = await sql`
-      UPDATE usuarios
-      SET nexus_user_id = ${nexusUserId}::uuid,
-          nexus_email = ${email},
-          nome = ${nome},
-          cargo = ${cargo},
-          ativo = true,
-          updated_at = CURRENT_TIMESTAMP
-      WHERE id = ${existing[0].id}
-      RETURNING id, nexus_user_id, nexus_email, nome, email, cargo, ativo, apuracao_mensal
-    `
+    const current = existing[0]
+    const needsUpdate =
+      current.nexus_user_id !== nexusUserId ||
+      (current.nexus_email ? current.nexus_email.toLowerCase() : "") !== email ||
+      current.nome !== nome ||
+      current.cargo !== cargo ||
+      !current.ativo
+
+    if (needsUpdate) {
+      const [updated] = await sql<UsuarioRow>`
+        UPDATE usuarios
+        SET nexus_user_id = ${nexusUserId}::uuid,
+            nexus_email = ${email},
+            nome = ${nome},
+            cargo = ${cargo},
+            ativo = true,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = ${current.id}
+        RETURNING id, nexus_user_id, nexus_email, nome, email, cargo, ativo, apuracao_mensal
+      `
+      return {
+        ...updated,
+        avatar_url: session.user.avatar_url ?? null,
+      } as User
+    }
+
     return {
-      ...updated,
+      ...current,
       avatar_url: session.user.avatar_url ?? null,
     } as User
   }
@@ -197,21 +236,42 @@ async function syncLocalUser(session: NexusSession): Promise<User | null> {
 
 export async function getSessionFromToken(token: string | null): Promise<User | null> {
   if (!token) return null
+
+  const cached = sessionCache.get(token)
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.data
+  }
+
   const session = await introspectGlobalSession(token)
-  if (!session) return null
-  return syncLocalUser(session)
+  if (!session) {
+    sessionCache.delete(token)
+    return null
+  }
+
+  const user = await syncLocalUser(session)
+  if (user) {
+    sessionCache.set(token, {
+      data: user,
+      expiresAt: Date.now() + SESSION_CACHE_TTL_MS,
+    })
+  } else {
+    sessionCache.delete(token)
+  }
+
+  return user
 }
 
-export async function getSession(): Promise<User | null> {
+export const getSession = cache(async function getSession(): Promise<User | null> {
   const token = await getGlobalSessionTokenFromCookies()
   return getSessionFromToken(token)
-}
+})
 
 export async function getSessionFromRequest(request: NextRequest): Promise<User | null> {
   return getSessionFromToken(getGlobalSessionToken(request))
 }
 
 export async function revokeGlobalSession(token: string) {
+  sessionCache.delete(token)
   const nexusBaseUrl = getEnv("RARONEXUS_BASE_URL", "http://localhost:3001")
   await fetch(new URL("/api/v1/sessions/revoke", nexusBaseUrl), {
     method: "POST",
@@ -224,13 +284,21 @@ export async function revokeGlobalSession(token: string) {
 export async function destroySession(): Promise<void> {
   const cookieStore = await cookies()
   const token = cookieStore.get(AUTH_COOKIE_NAME)?.value
-  if (token) await revokeGlobalSession(token)
+  if (token) {
+    sessionCache.delete(token)
+    await revokeGlobalSession(token)
+  }
   cookieStore.delete(AUTH_COOKIE_NAME)
   cookieStore.delete(LEGACY_SESSION_COOKIE_NAME)
   cookieStore.delete(LEGACY_USER_COOKIE_NAME)
 }
 
-export async function resolveTecnicoRarotecId(user: User): Promise<number | null> {
+export const resolveTecnicoRarotecId = cache(async function resolveTecnicoRarotecId(user: User): Promise<number | null> {
+  const cached = tecnicoCache.get(user.id)
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.data
+  }
+
   try {
     let tecnicos = await sql`
       SELECT id FROM tecnicos_rarotec 
@@ -243,13 +311,23 @@ export async function resolveTecnicoRarotecId(user: User): Promise<number | null
         SELECT id FROM tecnicos_rarotec WHERE LOWER(nome) = LOWER(${user.nome}) LIMIT 1
       `
     }
-    return tecnicos.length > 0 ? Number(tecnicos[0].id) : null
+    const result = tecnicos.length > 0 ? Number(tecnicos[0].id) : null
+    tecnicoCache.set(user.id, {
+      data: result,
+      expiresAt: Date.now() + RESOLVER_CACHE_TTL_MS,
+    })
+    return result
   } catch {
     return null
   }
-}
+})
 
-export async function resolveSetoresUsuario(user: User): Promise<string[]> {
+export const resolveSetoresUsuario = cache(async function resolveSetoresUsuario(user: User): Promise<string[]> {
+  const cached = setoresCache.get(user.id)
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.data
+  }
+
   try {
     let rows = await sql<{ setores: string[] }>`
       SELECT setores FROM tecnicos_rarotec 
@@ -263,8 +341,13 @@ export async function resolveSetoresUsuario(user: User): Promise<string[]> {
       `
     }
     const setores = rows.length > 0 ? rows[0].setores : null
-    return Array.isArray(setores) ? setores.filter(Boolean) : []
+    const result = Array.isArray(setores) ? setores.filter(Boolean) : []
+    setoresCache.set(user.id, {
+      data: result,
+      expiresAt: Date.now() + RESOLVER_CACHE_TTL_MS,
+    })
+    return result
   } catch {
     return []
   }
-}
+})

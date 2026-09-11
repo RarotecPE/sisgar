@@ -47,7 +47,7 @@ if (!existsSync(nextBin)) {
 
 const child = spawn(
   process.execPath,
-  [nextBin, "dev", "-H", host, "-p", port],
+  [nextBin, "dev", "--webpack", "-H", host, "-p", port],
   {
     stdio: "inherit",
     env: process.env,

@@ -42,14 +42,17 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import dynamic from "next/dynamic"
 import { Badge } from "@/components/ui/badge"
 import { ClienteForm } from "./cliente-form"
 import { ContratosDialog } from "./contratos-dialog"
 import { OrgaosDialog } from "./orgaos-dialog"
 import { ExportButton } from "@/components/export-button"
-import { ClientesLote } from "@/components/clientes-lote"
-import { exportToExcel, exportToPDF, exportToExcelMultiSheet, exportToPDFMultiSection } from "@/lib/export-utils"
 import type { Cliente } from "@/lib/types"
+
+const ClientesLote = dynamic(() => import("@/components/clientes-lote").then((m) => m.ClientesLote), {
+  ssr: false,
+})
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
@@ -118,8 +121,9 @@ export default function ClientesPage() {
   }
 
   // Funções de exportação
-  const handleExportExcel = () => {
+  const handleExportExcel = async () => {
     if (!filteredClientes) return
+    const { exportToExcel } = await import("@/lib/export-utils")
     exportToExcel({
       filename: "clientes",
       title: "Lista de Clientes - Rarotec",
@@ -141,8 +145,9 @@ export default function ClientesPage() {
     })
   }
 
-  const handleExportPDF = () => {
+  const handleExportPDF = async () => {
     if (!filteredClientes) return
+    const { exportToPDF } = await import("@/lib/export-utils")
     exportToPDF({
       filename: "clientes",
       title: "Lista de Clientes - Rarotec",
@@ -182,6 +187,7 @@ export default function ClientesPage() {
       }))
     )
 
+    const { exportToExcelMultiSheet } = await import("@/lib/export-utils")
     exportToExcelMultiSheet("clientes-completo", [
       {
         name: "Clientes",
@@ -237,6 +243,7 @@ export default function ClientesPage() {
       }))
     )
 
+    const { exportToPDFMultiSection } = await import("@/lib/export-utils")
     exportToPDFMultiSection("clientes-completo", "Relatório Completo de Clientes - Rarotec", [
       {
         title: "Lista de Clientes",
