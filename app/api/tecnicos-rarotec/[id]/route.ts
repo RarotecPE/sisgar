@@ -51,18 +51,6 @@ export async function PUT(
   try {
     const data = await request.json()
     const parsedId = parseInt(id)
-    const nexusEmail = typeof data.nexus_email === "string" && data.nexus_email.trim() ? data.nexus_email.trim().toLowerCase() : null
-
-    if (nexusEmail) {
-      const existingNexus = await sql`
-        SELECT id FROM tecnicos_rarotec 
-        WHERE LOWER(nexus_email) = ${nexusEmail} AND id <> ${parsedId}
-        LIMIT 1
-      `
-      if (existingNexus.length > 0) {
-        return NextResponse.json({ error: "E-mail do Nexus já vinculado a outro técnico." }, { status: 400 })
-      }
-    }
     
     const primaryCargo = Array.isArray(data.cargos) && data.cargos.length > 0
       ? data.cargos[0]
@@ -81,7 +69,6 @@ export async function PUT(
         telefone = ${data.telefone || null},
         celular = ${data.celular || null},
         email = ${data.email ? data.email.trim().toLowerCase() : null},
-        nexus_email = ${nexusEmail},
         cargo = ${primaryCargo},
         cargos = ${data.cargos || []},
         data_admissao = ${data.data_admissao || null},

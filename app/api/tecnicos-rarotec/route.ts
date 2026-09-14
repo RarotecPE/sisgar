@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server"
 import { sql } from "@/lib/db"
 import { getSession } from "@/lib/auth"
-import { syncTecnicosRarotecWithNexus } from "@/lib/nexus-sync"
 
 export async function GET() {
   const user = await getSession()
@@ -10,10 +9,6 @@ export async function GET() {
   }
 
   try {
-    await syncTecnicosRarotecWithNexus().catch((error) => {
-      console.warn("raronexus_tecnicos_sync_failed", error)
-    })
-
     const tecnicos = await sql`
       SELECT * FROM tecnicos_rarotec 
       ORDER BY nome ASC
@@ -33,19 +28,7 @@ export async function POST(request: Request) {
 
   try {
     const data = await request.json()
-    const nexusEmail = typeof data.nexus_email === "string" && data.nexus_email.trim() ? data.nexus_email.trim().toLowerCase() : null
 
-    if (nexusEmail) {
-      const existing = await sql`
-        SELECT id FROM tecnicos_rarotec 
-        WHERE LOWER(nexus_email) = ${nexusEmail} 
-        LIMIT 1
-      `
-      if (existing.length > 0) {
-        return NextResponse.json({ error: "E-mail do Nexus já vinculado a outro técnico." }, { status: 400 })
-      }
-    }
-    
     const primaryCargo = Array.isArray(data.cargos) && data.cargos.length > 0
       ? data.cargos[0]
       : (data.cargo || null)
@@ -53,7 +36,7 @@ export async function POST(request: Request) {
     const result = await sql`
       INSERT INTO tecnicos_rarotec (
         nome, cpf, rg, data_nascimento, endereco, cidade, estado, cep,
-        telefone, celular, email, nexus_email, cargo, cargos, data_admissao, setores, foto_url, ativo
+        telefone, celular, email, cargo, cargos, data_admissao, setores, foto_url, ativo
       ) VALUES (
         ${data.nome},
         ${data.cpf || null},
@@ -66,7 +49,6 @@ export async function POST(request: Request) {
         ${data.telefone || null},
         ${data.celular || null},
         ${data.email ? data.email.trim().toLowerCase() : null},
-        ${nexusEmail},
         ${primaryCargo},
         ${data.cargos || []},
         ${data.data_admissao || null},

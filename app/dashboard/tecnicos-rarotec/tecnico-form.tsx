@@ -5,7 +5,6 @@ import useSWR from "swr"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Switch } from "@/components/ui/switch"
 import { Badge } from "@/components/ui/badge"
 import { Loader2, X, Check, ChevronsUpDown, Sparkles } from "lucide-react"
 import { MaskedInput } from "@/components/masked-input"
@@ -114,7 +113,6 @@ export function TecnicoForm({ tecnico, onSuccess, onCancel }: TecnicoFormProps) 
     telefone: tecnico?.telefone || "",
     celular: tecnico?.celular || "",
     email: tecnico?.email || "",
-    nexus_email: tecnico?.nexus_email || "",
     cargo: tecnico?.cargo || "",
     cargos: tecnico?.cargos || [],
     data_admissao: tecnico?.data_admissao?.split("T")[0] || "",
@@ -129,10 +127,11 @@ export function TecnicoForm({ tecnico, onSuccess, onCancel }: TecnicoFormProps) 
       ...prev,
       nome: candidato.nome,
       email: candidato.email,
-      nexus_email: candidato.email,
       cpf: candidato.cpf || prev.cpf,
       telefone: candidato.telefone || prev.telefone,
       foto_url: candidato.avatar_url || prev.foto_url,
+      cargo: prev.cargo || candidato.cargo || "",
+      cargos: prev.cargos && prev.cargos.length > 0 ? prev.cargos : (candidato.cargo ? [candidato.cargo] : []),
     }))
   }
 
@@ -174,7 +173,6 @@ export function TecnicoForm({ tecnico, onSuccess, onCancel }: TecnicoFormProps) 
         ...formData,
         foto_url: formData.foto_url || null,
         email: formData.email ? formData.email.trim() : null,
-        nexus_email: formData.nexus_email ? formData.nexus_email.trim() : null,
         data_nascimento: formData.data_nascimento || null,
         data_admissao: formData.data_admissao || null,
         clientes_fixos: clientesFixos,
@@ -265,7 +263,7 @@ export function TecnicoForm({ tecnico, onSuccess, onCancel }: TecnicoFormProps) 
                           handleSelectNexusUser(cand)
                           setOpenNexusCombobox(false)
                         }}
-                        className="flex items-center justify-between py-2 cursor-pointer gap-2"
+                        className="flex items-center justify-between py-2 gap-2 cursor-pointer"
                       >
                         <div className="flex items-center gap-2 min-w-0 flex-1 mr-2">
                           <Check
@@ -401,21 +399,6 @@ export function TecnicoForm({ tecnico, onSuccess, onCancel }: TecnicoFormProps) 
               placeholder="(00) 00000-0000"
               className="mt-1.5"
             />
-          </div>
-
-          <div className="sm:col-span-2 min-w-0">
-            <Label htmlFor="nexus_email">E-mail do Nexus</Label>
-            <Input
-              id="nexus_email"
-              type="email"
-              value={formData.nexus_email}
-              onChange={(e) => setFormData({ ...formData, nexus_email: e.target.value })}
-              placeholder="Preencha apenas se for diferente do e-mail local"
-              className="mt-1.5"
-            />
-            <p className="text-xs text-muted-foreground mt-1">
-              Se ficar vazio, o Sisgar usa o e-mail local para vincular com o RaroNexus.
-            </p>
           </div>
         </div>
       </div>
@@ -636,17 +619,6 @@ export function TecnicoForm({ tecnico, onSuccess, onCancel }: TecnicoFormProps) 
                 ))}
               </div>
             )}
-          </div>
-
-          <div className="flex items-center gap-3 pt-2">
-            <Switch
-              id="ativo"
-              checked={formData.ativo}
-              onCheckedChange={(checked) => setFormData({ ...formData, ativo: checked })}
-            />
-            <Label htmlFor="ativo" className="cursor-pointer">
-              Tecnico Ativo
-            </Label>
           </div>
         </div>
       </div>

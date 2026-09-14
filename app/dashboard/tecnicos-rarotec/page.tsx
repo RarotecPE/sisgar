@@ -20,7 +20,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Badge } from "@/components/ui/badge"
 import { 
   Plus, 
   Search, 
@@ -28,8 +27,6 @@ import {
   Trash2, 
   Loader2, 
   Users,
-  UserCheck,
-  UserX,
   MoreHorizontal,
   ShieldAlert
 } from "lucide-react"
@@ -124,12 +121,10 @@ export default function TecnicosRarotecPage() {
         { header: "Cargo", key: "cargo", width: 20 },
         { header: "E-mail", key: "email", width: 35 },
         { header: "Celular", key: "celular", width: 18 },
-        { header: "Status", key: "status", width: 10 },
       ],
       data: filteredTecnicos.map(t => ({
         ...t,
         cargo: getCargoDisplay(t),
-        status: t.ativo ? "Ativo" : "Inativo"
       }))
     })
   }
@@ -144,39 +139,12 @@ export default function TecnicosRarotecPage() {
         { header: "Cargo", key: "cargo" },
         { header: "E-mail", key: "email" },
         { header: "Celular", key: "celular" },
-        { header: "Status", key: "status" },
       ],
       data: filteredTecnicos.map(t => ({
         ...t,
         cargo: getCargoDisplay(t),
-        status: t.ativo ? "Ativo" : "Inativo"
       }))
     })
-  }
-
-  async function handleToggleStatus(tecnico: TecnicoRarotec) {
-    const previousTecnicos = tecnicos
-    const nextStatus = !tecnico.ativo
-    mutate(
-      tecnicos.map((t) => (t.id === tecnico.id ? { ...t, ativo: nextStatus } : t)),
-      false
-    )
-    try {
-      const res = await fetch(`/api/tecnicos-rarotec/${tecnico.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...tecnico, ativo: nextStatus }),
-      })
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}))
-        throw new Error(errorData.error || "Erro ao atualizar status do técnico")
-      }
-      toast.success(nextStatus ? "Técnico ativado com sucesso" : "Técnico inativado com sucesso")
-      await mutate()
-    } catch (error) {
-      mutate(previousTecnicos, false)
-      toast.error(error instanceof Error ? error.message : "Erro ao atualizar status do técnico")
-    }
   }
 
   function handleEdit(tecnico: TecnicoRarotec) {
@@ -213,13 +181,9 @@ export default function TecnicosRarotecPage() {
     return (
       t.nome.toLowerCase().includes(term) ||
       t.email?.toLowerCase().includes(term) ||
-      t.nexus_email?.toLowerCase().includes(term) ||
       cargoDisplay.toLowerCase().includes(term)
     )
   })
-
-  const totalAtivos = tecnicos.filter((t) => t.ativo).length
-  const totalInativos = tecnicos.filter((t) => !t.ativo).length
 
   return (
     <div className="p-6 lg:p-8 space-y-6">
@@ -244,8 +208,8 @@ export default function TecnicosRarotecPage() {
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid gap-4 sm:grid-cols-3">
+      {/* Stats Card */}
+      <div className="grid gap-4 sm:grid-cols-1 max-w-xs">
         <Card className="border shadow-sm">
           <CardContent className="flex items-center gap-4 p-4">
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
@@ -253,29 +217,7 @@ export default function TecnicosRarotecPage() {
             </div>
             <div>
               <p className="text-2xl font-bold">{tecnicos.length}</p>
-              <p className="text-sm text-muted-foreground">Total</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border shadow-sm">
-          <CardContent className="flex items-center gap-4 p-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/10 dark:bg-emerald-500/15">
-              <UserCheck className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{totalAtivos}</p>
-              <p className="text-sm text-muted-foreground">Ativos</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border shadow-sm">
-          <CardContent className="flex items-center gap-4 p-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-500/10 dark:bg-slate-500/15">
-              <UserX className="h-6 w-6 text-slate-600 dark:text-slate-400" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{totalInativos}</p>
-              <p className="text-sm text-muted-foreground">Inativos</p>
+              <p className="text-sm text-muted-foreground">Total de Técnicos</p>
             </div>
           </CardContent>
         </Card>
@@ -314,20 +256,19 @@ export default function TecnicosRarotecPage() {
                   <TableHead className="font-medium">Cargo</TableHead>
                   <TableHead className="font-medium hidden md:table-cell">E-mail</TableHead>
                   <TableHead className="font-medium hidden lg:table-cell">Celular</TableHead>
-                  <TableHead className="font-medium">Status</TableHead>
                   <TableHead className="font-medium w-[70px]"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="h-32 text-center">
+                    <TableCell colSpan={5} className="h-32 text-center">
                       <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
                     </TableCell>
                   </TableRow>
                 ) : filteredTecnicos.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="h-32 text-center">
+                    <TableCell colSpan={5} className="h-32 text-center">
                       <div className="flex flex-col items-center gap-2">
                         <Users className="h-8 w-8 text-muted-foreground/30" />
                         <p className="text-sm text-muted-foreground">
@@ -351,25 +292,10 @@ export default function TecnicosRarotecPage() {
                         {getCargoDisplay(tecnico)}
                       </TableCell>
                       <TableCell className="text-muted-foreground hidden md:table-cell">
-                        <div>{tecnico.email || "-"}</div>
-                        {tecnico.nexus_email && tecnico.nexus_email.toLowerCase() !== tecnico.email?.toLowerCase() && (
-                          <div className="text-xs text-muted-foreground/80 font-mono">Nexus: {tecnico.nexus_email}</div>
-                        )}
+                        {tecnico.email || "-"}
                       </TableCell>
                       <TableCell className="text-muted-foreground hidden lg:table-cell">
                         {tecnico.celular || tecnico.telefone || "-"}
-                      </TableCell>
-                      <TableCell>
-                        <Badge 
-                          variant="secondary"
-                          className={
-                            tecnico.ativo 
-                              ? "bg-emerald-500/15 text-emerald-700 hover:bg-emerald-500/20 dark:text-emerald-300" 
-                              : "bg-slate-500/15 text-slate-700 hover:bg-slate-500/20 dark:text-slate-300"
-                          }
-                        >
-                          {tecnico.ativo ? "Ativo" : "Inativo"}
-                        </Badge>
                       </TableCell>
                       <TableCell>
                         <DropdownMenu>
@@ -382,19 +308,6 @@ export default function TecnicosRarotecPage() {
                             <DropdownMenuItem onClick={() => handleEdit(tecnico)}>
                               <Pencil className="mr-2 h-4 w-4" />
                               Editar
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleToggleStatus(tecnico)}>
-                              {tecnico.ativo ? (
-                                <>
-                                  <UserX className="mr-2 h-4 w-4" />
-                                  Desativar
-                                </>
-                              ) : (
-                                <>
-                                  <UserCheck className="mr-2 h-4 w-4" />
-                                  Ativar
-                                </>
-                              )}
                             </DropdownMenuItem>
                             <DropdownMenuItem 
                               onClick={() => handleDelete(tecnico.id)}

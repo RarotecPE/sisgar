@@ -238,7 +238,7 @@ function AccountMenu({ user }: { user: HeaderUser }) {
         <DropdownMenuItem asChild disabled={!nexusProfileUrl}>
           <a href={nexusProfileUrl || "#"} target="_blank" rel="noreferrer" className="gap-2">
             <UserCircle className="h-4 w-4" />
-            Editar perfil no RaroNexus
+            Editar perfil
           </a>
         </DropdownMenuItem>
         <DropdownMenuSeparator />

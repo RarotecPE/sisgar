@@ -203,145 +203,20 @@ export async function syncAuthorizedNexusUsers(): Promise<void> {
   return usuariosSyncPromise
 }
 
-let tecnicosSyncPromise: Promise<void> | null = null
-
 /**
- * Sincroniza a tabela de técnicos da Rarotec (`tecnicos_rarotec`) com os autorizados do RaroNexus.
- * Executa em O(1) queries eliminando o N+1 e atualizando apenas registros alterados.
+ * Sincronização de técnicos com o RaroNexus.
+ *
+ * NOTA DE ARQUITETURA:
+ * No SISGAR, os dados dos técnicos são geridos pelo usuário através do modal de cadastro/edição.
+ * O RaroNexus é utilizado para preenchimento inicial no modal (puxando nome, e-mail, telefone, CPF,
+ * cargo, foto), mas caso o usuário edite qualquer uma dessas informações, os dados editados locais
+ * salvos em `tecnicos_rarotec` são a fonte da verdade e NUNCA devem ser sobrescritos pelo Nexus.
+ *
+ * (A sincronização automática de usuários de login permanece estritamente em `syncAuthorizedNexusUsers`).
  */
 export async function syncTecnicosRarotecWithNexus(): Promise<void> {
-  if (tecnicosSyncPromise) return tecnicosSyncPromise
-
-  tecnicosSyncPromise = (async () => {
-    const nexusUsers = await fetchAuthorizedNexusUsers()
-
-    const authorizedEmails = new Set<string>()
-
-    // 1. Busca todos os técnicos locais em uma única query
-    const localTecnicos = await sql<TecnicoRow>`
-      SELECT id, nome, email, nexus_email, cargo, cargos, foto_url, ativo
-      FROM tecnicos_rarotec
-    `
-
-    const byNexusEmail = new Map<string, TecnicoRow>()
-    const byEmail = new Map<string, TecnicoRow>()
-    const byNome = new Map<string, TecnicoRow>()
-
-    for (const tec of localTecnicos) {
-      if (tec.nexus_email) byNexusEmail.set(String(tec.nexus_email).trim().toLowerCase(), tec)
-      if (tec.email) byEmail.set(String(tec.email).trim().toLowerCase(), tec)
-      if (tec.nome) byNome.set(String(tec.nome).trim().toLowerCase(), tec)
-    }
-
-    const operations: Promise<unknown>[] = []
-
-    for (const nexusUser of nexusUsers) {
-      const email = nexusUser.email?.trim().toLowerCase()
-      const nome = (nexusUser.nome || email).trim()
-      const cargo = mapRoleToCargo({
-        chave: nexusUser.role_chave || "",
-        nome: nexusUser.role_nome || "",
-      })
-
-      if (!email || !cargo) continue
-
-      authorizedEmails.add(email)
-
-      // Localizar técnico existente em memória (ordem de prioridade: nexus_email -> email -> nome)
-      const tec =
-        byNexusEmail.get(email) ||
-        byEmail.get(email) ||
-        byNome.get(nome.toLowerCase())
-
-      if (tec) {
-        const fotoUrl = tec.foto_url || nexusUser.avatar_url || null
-        const targetNome = nome || tec.nome
-        const targetEmail = tec.email || email
-        const targetNexusEmail =
-          tec.nexus_email && tec.nexus_email.toLowerCase() === email
-            ? tec.nexus_email
-            : tec.email && tec.email.toLowerCase() === email && tec.nexus_email
-            ? tec.nexus_email
-            : tec.nexus_email || email
-
-        const needsUpdate =
-          tec.ativo !== true ||
-          (nome && tec.nome !== targetNome) ||
-          (!tec.email && targetEmail !== tec.email) ||
-          (!tec.nexus_email && targetNexusEmail !== tec.nexus_email) ||
-          (!tec.foto_url && nexusUser.avatar_url && tec.foto_url !== fotoUrl)
-
-        if (needsUpdate) {
-          operations.push(
-            sql`
-              UPDATE tecnicos_rarotec
-              SET nome = COALESCE(NULLIF(${nome}, ''), nome),
-                  email = COALESCE(email, ${email}),
-                  nexus_email = CASE 
-                    WHEN LOWER(COALESCE(nexus_email, '')) = ${email} THEN nexus_email
-                    WHEN LOWER(COALESCE(email, '')) = ${email} THEN nexus_email
-                    ELSE COALESCE(nexus_email, ${email})
-                  END,
-                  foto_url = COALESCE(${fotoUrl}, foto_url),
-                  ativo = true,
-                  updated_at = CURRENT_TIMESTAMP
-              WHERE id = ${tec.id}
-            `
-          )
-        }
-      } else {
-        const fotoUrl = nexusUser.avatar_url || null
-        operations.push(
-          sql`
-            INSERT INTO tecnicos_rarotec (
-              nome, email, nexus_email, cargo, cargos, setores, departamentos, foto_url, ativo
-            ) VALUES (
-              ${nome},
-              ${email},
-              ${email},
-              ${null},
-              ${[]},
-              ${[]},
-              ${[]},
-              ${fotoUrl},
-              true
-            )
-          `
-        )
-      }
-    }
-
-    // Inativa técnicos locais que não constam na lista de autorizados do RaroNexus
-    const toInactivateTecIds = localTecnicos
-      .filter((localTec) => {
-        const nexusEmail = localTec.nexus_email ? String(localTec.nexus_email).trim().toLowerCase() : ""
-        const tecEmail = localTec.email ? String(localTec.email).trim().toLowerCase() : ""
-        const isAuthorized = Boolean(
-          (nexusEmail && authorizedEmails.has(nexusEmail)) ||
-          (!nexusEmail && tecEmail && authorizedEmails.has(tecEmail))
-        )
-        return !isAuthorized && localTec.ativo !== false
-      })
-      .map((t) => t.id)
-
-    if (toInactivateTecIds.length > 0) {
-      operations.push(
-        sql`
-          UPDATE tecnicos_rarotec
-          SET ativo = false,
-              updated_at = CURRENT_TIMESTAMP
-          WHERE id = ANY(${toInactivateTecIds})
-        `
-      )
-    }
-
-    if (operations.length > 0) {
-      await Promise.all(operations)
-    }
-  })().finally(() => {
-    tecnicosSyncPromise = null
-  })
-
-  return tecnicosSyncPromise
+  // Mantido como no-op intencional para garantir que edições de técnicos não sejam sobrescritas.
+  return
 }
+
 
