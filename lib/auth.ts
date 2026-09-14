@@ -158,6 +158,7 @@ type CachedEntry<T> = {
 
 const tecnicoCache = new Map<number, CachedEntry<number | null>>()
 const setoresCache = new Map<number, CachedEntry<string[]>>()
+const sessionInflight = new Map<string, Promise<User | null>>()
 
 const RESOLVER_CACHE_TTL_MS = 60_000 // 60s de cache em memória para dados estáticos do técnico
 
@@ -232,9 +233,7 @@ async function syncLocalUser(session: NexusSession): Promise<User | null> {
   } as User
 }
 
-export async function getSessionFromToken(token: string | null): Promise<User | null> {
-  if (!token) return null
-
+async function resolveSessionFromToken(token: string): Promise<User | null> {
   const session = await introspectGlobalSession(token)
   if (!session) {
     return null
@@ -242,6 +241,19 @@ export async function getSessionFromToken(token: string | null): Promise<User | 
 
   const user = await syncLocalUser(session)
   return user
+}
+
+export async function getSessionFromToken(token: string | null): Promise<User | null> {
+  if (!token) return null
+
+  const pending = sessionInflight.get(token)
+  if (pending) return pending
+
+  const promise = resolveSessionFromToken(token).finally(() => {
+    sessionInflight.delete(token)
+  })
+  sessionInflight.set(token, promise)
+  return promise
 }
 
 export const getSession = cache(async function getSession(): Promise<User | null> {

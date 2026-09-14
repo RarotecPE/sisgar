@@ -30,7 +30,23 @@ import { LABEL_TIPO_MEDICO } from "@/lib/documentos-medicos"
 import { formatBRL } from "@/lib/apuracao"
 import { STATUS_OUVE } from "@/lib/ouve-rarotec"
 
-const fetcher = (url: string) => fetch(url).then((r) => r.json())
+const fetcher = async (url: string) => {
+  const response = await fetch(url, { cache: "no-store" })
+  const data = await response.json().catch(() => null)
+  if (!response.ok) throw new Error(data?.error || "Erro ao carregar avisos")
+  return data
+}
+
+const passiveSWRConfig = {
+  dedupingInterval: 30000,
+  revalidateOnFocus: false,
+  shouldRetryOnError: false,
+}
+
+const checklistSWRConfig = {
+  ...passiveSWRConfig,
+  refreshInterval: 60000,
+}
 
 // Paleta por tom — strings literais completas para o JIT do Tailwind detectar.
 // chip/ring/count: cores do ícone, anel e número. border/base: borda e cor de fundo sólida.
@@ -148,8 +164,12 @@ export function CentralAvisos() {
   const podeApuracao = user ? canApuracaoMensal(user.cargo, user.apuracao_mensal) : false
   const tecnicoId = user?.tecnico_rarotec_id
 
-  const { data: checklist } = useSWR(user ? "/api/checklists/alertas" : null, fetcher, { refreshInterval: 60000 })
-  const { data: contratos } = useSWR(user && podeApuracao ? "/api/dashboard/contratos-alerta" : null, fetcher)
+  const { data: checklist } = useSWR(user ? "/api/checklists/alertas" : null, fetcher, checklistSWRConfig)
+  const { data: contratos } = useSWR(
+    user && podeApuracao ? "/api/dashboard/contratos-alerta" : null,
+    fetcher,
+    passiveSWRConfig,
+  )
   const pendUrl = !user
     ? null
     : userIsGestor
@@ -157,7 +177,7 @@ export function CentralAvisos() {
       : tecnicoId
         ? `/api/dashboard/pendencias?tecnico_id=${tecnicoId}`
         : null
-  const { data: pendencias } = useSWR(pendUrl, fetcher)
+  const { data: pendencias } = useSWR(pendUrl, fetcher, passiveSWRConfig)
   const pendMedUrl = !user
     ? null
     : userIsGestor
@@ -165,13 +185,18 @@ export function CentralAvisos() {
       : tecnicoId
         ? `/api/dashboard/pendencias-medicas?tecnico_id=${tecnicoId}`
         : null
-  const { data: pendenciasMedicas } = useSWR(pendMedUrl, fetcher)
-  const { data: documentosAnalise } = useSWR(user && userIsGestor ? "/api/dashboard/documentos-analise" : null, fetcher)
+  const { data: pendenciasMedicas } = useSWR(pendMedUrl, fetcher, passiveSWRConfig)
+  const { data: documentosAnalise } = useSWR(
+    user && userIsGestor ? "/api/dashboard/documentos-analise" : null,
+    fetcher,
+    passiveSWRConfig,
+  )
   const { data: solicitacoes, mutate: mutateSolic } = useSWR(
     user && userIsGestor ? "/api/agenda-solicitacoes/pendentes" : null,
     fetcher,
+    passiveSWRConfig,
   )
-  const { data: ouve } = useSWR(user && userIsGestor ? "/api/dashboard/ouve-abertos" : null, fetcher)
+  const { data: ouve } = useSWR(user && userIsGestor ? "/api/dashboard/ouve-abertos" : null, fetcher, passiveSWRConfig)
 
   const [aberto, setAberto] = useState<string | null>(null)
 

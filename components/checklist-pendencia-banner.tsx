@@ -6,7 +6,19 @@ import useSWR from "swr"
 import { AlertTriangle, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json())
+const fetcher = async (url: string) => {
+  const response = await fetch(url, { cache: "no-store" })
+  const data = await response.json().catch(() => null)
+  if (!response.ok) throw new Error(data?.error || "Erro ao carregar alertas")
+  return data
+}
+
+const checklistAlertsSWRConfig = {
+  refreshInterval: 60000,
+  dedupingInterval: 30000,
+  revalidateOnFocus: false,
+  shouldRetryOnError: false,
+}
 
 interface AlertasResponse {
   gestor: boolean
@@ -18,7 +30,7 @@ interface AlertasResponse {
 // no canto inferior e pode ser recolhida temporariamente, reaparecendo a cada recarga.
 export function ChecklistPendenciaBanner() {
   const [recolhido, setRecolhido] = useState(false)
-  const { data } = useSWR<AlertasResponse>("/api/checklists/alertas", fetcher, { refreshInterval: 60000 })
+  const { data } = useSWR<AlertasResponse>("/api/checklists/alertas", fetcher, checklistAlertsSWRConfig)
 
   const vencidas = data?.resumo?.vencidas ?? 0
   if (vencidas === 0 || recolhido) return null

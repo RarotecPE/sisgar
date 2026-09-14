@@ -9,7 +9,18 @@ import { useSession } from "@/lib/auth-context"
 import { isGestor } from "@/lib/permissions"
 import { CentralAvisos } from "@/components/central-avisos"
 
-const fetcher = (url: string) => fetch(url).then(res => res.json())
+const fetcher = async (url: string) => {
+  const response = await fetch(url, { cache: "no-store" })
+  const data = await response.json().catch(() => null)
+  if (!response.ok) throw new Error(data?.error || "Erro ao carregar dados")
+  return data
+}
+
+const dashboardSWRConfig = {
+  dedupingInterval: 10000,
+  revalidateOnFocus: false,
+  shouldRetryOnError: false,
+}
 
 // Definição das estatísticas e cards de acesso rápido
 const statCards = [
@@ -53,9 +64,9 @@ export default function DashboardPage() {
   const activitiesUrl = user ? `/api/dashboard/activities?is_gestor=${userIsGestor}${tecnicoId ? `&tecnico_id=${tecnicoId}` : ''}` : null
   const scheduleUrl = user ? `/api/dashboard/schedule?is_gestor=${userIsGestor}${tecnicoId ? `&tecnico_id=${tecnicoId}` : ''}` : null
 
-  const { data: stats } = useSWR(statsUrl, fetcher)
-  const { data: activities } = useSWR(activitiesUrl, fetcher)
-  const { data: schedule } = useSWR(scheduleUrl, fetcher)
+  const { data: stats } = useSWR(statsUrl, fetcher, dashboardSWRConfig)
+  const { data: activities } = useSWR(activitiesUrl, fetcher, dashboardSWRConfig)
+  const { data: schedule } = useSWR(scheduleUrl, fetcher, dashboardSWRConfig)
 
   if (loading || !user) {
     return (

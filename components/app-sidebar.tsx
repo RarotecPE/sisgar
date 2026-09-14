@@ -45,7 +45,19 @@ interface NavItem {
   requiresOuveAtivo?: boolean
 }
 
-const swrFetcher = (url: string) => fetch(url).then((r) => r.json())
+const swrFetcher = async (url: string) => {
+  const response = await fetch(url, { cache: "no-store" })
+  const data = await response.json().catch(() => null)
+  if (!response.ok) throw new Error(data?.error || "Erro ao carregar dados")
+  return data
+}
+
+const ouveConfigSWRConfig = {
+  refreshInterval: 30000,
+  dedupingInterval: 15000,
+  revalidateOnFocus: false,
+  shouldRetryOnError: false,
+}
 
 // Items base do menu - filtrados por permissão
 const baseNavItems: NavItem[] = [
@@ -148,9 +160,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
   const userRole = useMemo(() => getUserRole(user.nome, user.cargo), [user.nome, user.cargo])
 
   // Estado do modulo OuveRarotec (ativo/inativo)
-  const { data: ouveConfig } = useSWR<{ ativo: boolean }>("/api/ouve/config", swrFetcher, {
-    refreshInterval: 30000,
-  })
+  const { data: ouveConfig } = useSWR<{ ativo: boolean }>("/api/ouve/config", swrFetcher, ouveConfigSWRConfig)
   const ouveAtivo = ouveConfig?.ativo ?? false
   
   // Filtrar itens do menu baseado em permissões

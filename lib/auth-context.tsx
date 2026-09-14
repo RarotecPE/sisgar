@@ -42,10 +42,12 @@ export function AuthProvider({
   children: ReactNode
   initialUser?: User | null
 }) {
-  const { data: swrUser, isLoading, mutate } = useSWR<User>("/api/auth/me", fetcher, {
+  const { data: swrUser, mutate } = useSWR<User>("/api/auth/me", fetcher, {
     fallbackData: initialUser ?? undefined,
+    revalidateOnMount: !initialUser,
     revalidateOnFocus: false,
     shouldRetryOnError: false,
+    dedupingInterval: 30000,
   })
 
   // Prioriza o usuário verificado pelo servidor caso haja divergência com o cache
