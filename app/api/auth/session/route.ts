@@ -8,10 +8,11 @@ export async function GET(request: NextRequest) {
   if (!user) {
     const response = NextResponse.json({ authenticated: false, user: null, permissions: {} })
     clearSessionCookies(response)
+    response.headers.set("Cache-Control", "no-store, max-age=0")
     return response
   }
 
-  return NextResponse.json({
+  const response = NextResponse.json({
     authenticated: true,
     role: user.cargo,
     label: user.cargo || "Usuário",
@@ -27,4 +28,6 @@ export async function GET(request: NextRequest) {
     },
     permissions: getMenuItems(user.nome, user.cargo, user.apuracao_mensal),
   })
+  response.headers.set("Cache-Control", "no-store, max-age=0")
+  return response
 }

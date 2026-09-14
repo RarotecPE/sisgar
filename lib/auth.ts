@@ -156,11 +156,9 @@ type CachedEntry<T> = {
   expiresAt: number
 }
 
-const sessionCache = new Map<string, CachedEntry<User>>()
 const tecnicoCache = new Map<number, CachedEntry<number | null>>()
 const setoresCache = new Map<number, CachedEntry<string[]>>()
 
-const SESSION_CACHE_TTL_MS = 15_000 // 15s deduplica rajadas simultâneas de navegação e chamadas da API
 const RESOLVER_CACHE_TTL_MS = 60_000 // 60s de cache em memória para dados estáticos do técnico
 
 async function syncLocalUser(session: NexusSession): Promise<User | null> {
@@ -237,27 +235,12 @@ async function syncLocalUser(session: NexusSession): Promise<User | null> {
 export async function getSessionFromToken(token: string | null): Promise<User | null> {
   if (!token) return null
 
-  const cached = sessionCache.get(token)
-  if (cached && cached.expiresAt > Date.now()) {
-    return cached.data
-  }
-
   const session = await introspectGlobalSession(token)
   if (!session) {
-    sessionCache.delete(token)
     return null
   }
 
   const user = await syncLocalUser(session)
-  if (user) {
-    sessionCache.set(token, {
-      data: user,
-      expiresAt: Date.now() + SESSION_CACHE_TTL_MS,
-    })
-  } else {
-    sessionCache.delete(token)
-  }
-
   return user
 }
 
@@ -271,7 +254,6 @@ export async function getSessionFromRequest(request: NextRequest): Promise<User 
 }
 
 export async function revokeGlobalSession(token: string) {
-  sessionCache.delete(token)
   const nexusBaseUrl = getEnv("RARONEXUS_BASE_URL", "http://localhost:3001")
   await fetch(new URL("/api/v1/sessions/revoke", nexusBaseUrl), {
     method: "POST",
@@ -285,7 +267,6 @@ export async function destroySession(): Promise<void> {
   const cookieStore = await cookies()
   const token = cookieStore.get(AUTH_COOKIE_NAME)?.value
   if (token) {
-    sessionCache.delete(token)
     await revokeGlobalSession(token)
   }
   cookieStore.delete(AUTH_COOKIE_NAME)

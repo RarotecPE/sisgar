@@ -3,6 +3,7 @@ import { getSession, resolveTecnicoRarotecId } from "@/lib/auth"
 import { AppSidebar } from "@/components/app-sidebar"
 import { DashboardHeaderActions } from "@/components/dashboard-header-actions"
 import { ChecklistPendenciaBanner } from "@/components/checklist-pendencia-banner"
+import { SessionGuard } from "@/components/session-guard"
 import { AuthProvider, User } from "@/lib/auth-context"
 
 export default async function DashboardLayout({
@@ -31,6 +32,7 @@ export default async function DashboardLayout({
 
   return (
     <AuthProvider initialUser={initialUser}>
+      <SessionGuard />
       <div className="min-h-screen bg-background">
         <AppSidebar user={initialUser} />
         <main className="lg:pl-64">
